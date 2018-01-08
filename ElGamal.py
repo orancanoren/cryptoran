@@ -1,5 +1,12 @@
 import Utils
 import random
+import sys #sys.exit()
+
+# ==============================================
+# El Gamal PKC implementation
+# Author: Oran Can Oren
+# Email: orancanoren@gmail.com
+# ==============================================
 
 class ElGamal:
     def __init__(self):
@@ -31,7 +38,12 @@ class ElGamal:
         self.q = q
         self.g = g
 
-    def encrypt(self, encodedMessage):
+    def encrypt(self, messageString):
+        encodedMessage = Utils.encodeText(messageString)
+        if encodedMessage >= self.p:
+            print("Message too large, cannot encrypt!")
+            sys.exit()
+
         secret = random.randint(2, self.p - 1)
         r = pow(self.g, secret, self.p)
         t = pow(self.publicKey, secret, self.p) * encodedMessage % self.p
@@ -40,12 +52,13 @@ class ElGamal:
     def decrypt(self, r, t):
         r_inv = Utils.multiplicative_inverse(r, self.p)
         r_inv_b = pow(r_inv, self.privateKey, self.p)
-        return (r_inv_b * t) % self.p
+        decrypted = (r_inv_b * t) % self.p
+        return Utils.decodeBits(decrypted)
 
 crypt = ElGamal()
 crypt.generateKeys()
 
-r, t = crypt.encrypt(15)
+r, t = crypt.encrypt(input("Enter text\n>> "))
 print("encryption results:\nr: ", r, "\n\nt: ", t, "\n")
 
 decrypted = crypt.decrypt(r, t)

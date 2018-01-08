@@ -1,6 +1,12 @@
 import Utils
 import random
 
+# ==============================================
+# RSA PKC implementation
+# Author: Oran Can Oren
+# Email: orancanoren@gmail.com
+# ==============================================
+
 class RSA:
     def __init__(self):
         self.encryptionExp = None

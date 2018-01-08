@@ -8,6 +8,7 @@ import datetime
 # ==============================================
 
 # set RNG seed with respect to current time
+# Note that linear congruential PRNG's are NOT cryptographically secure!
 random.seed((datetime.datetime.now() 
     - datetime.datetime.utcfromtimestamp(0)).total_seconds())
 
@@ -62,7 +63,7 @@ def multiplicative_inverse(a, n):
     if gcd == 1:
         return x % n
     else:
-        print("Inverse does NOT exist!")
+        raise ValueError("inverse of " + str(a) + " does not exist!")
 
 def crt(moduli, remainders):
     # <moduli> and <remainders> are iterables
@@ -74,3 +75,20 @@ def crt(moduli, remainders):
         z_i = multiplicative_inverse(y_i, modulus)
         total += remainder * y_i * z_i % mod_product
     return total % mod_product
+
+def encodeText(messageString):
+    encoded = 0
+    for c in messageString:
+        encoded <<= 8
+        encoded += ord(c)
+    return encoded
+
+def decodeBits(encodedInt):
+    decoded = ""
+    encoded = int(encodedInt) # create a copy
+    bitMask = 0b11111111
+
+    while encoded != 0:
+        decoded = chr(bitMask & encoded) + decoded
+        encoded >>= 8
+    return decoded
