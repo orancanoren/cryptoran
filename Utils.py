@@ -23,22 +23,23 @@ def miller_rabin(n, confidence = 40):
     # Obtain s, d from (n-1) = 2^(s) * d
     d = n - 1
     s = 0
-    while (d % 2 == 0):
+    while d % 2 == 0:
         d >>= 1
         s += 1
 
     # witness loop
-    for i in range(confidence):
+    for _ in range(confidence):
         r = random.randint(2, n - 2)
         x = pow(r, d, n)
         if x == 1 or x == n - 1:
             continue
+        composite = True
         for j in range(s - 1):
             x = pow(x, 2, n)
             if x == 1:
                 return False
             elif x == n - 1:
-                composite = True
+                composite = False
                 break
         if composite:
             return False

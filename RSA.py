@@ -15,40 +15,43 @@ class RSA:
 
     def generateKeys(self):
         # 1 - pick primes
-        p = Utils.randomLargePrime(256)
-        q = Utils.randomLargePrime(256)
+        p = Utils.randomLargePrime(512)
+        q = Utils.randomLargePrime(512)
+        while p == q:
+            q = Utils.randomLargePrime(512)
 
         # 2 - compute the modulus
         n = p * q
+        print(f"p: {p}\nq: {q}")
+        totient = (p - 1) * (q - 1)
 
         # 3 - pick encryption exponent
         e = 2
-        totient = (p - 1) * (q - 1)
         while Utils.EEA(e, totient)[0] != 1:
             e = random.randint(2, totient - 1)
-        
+
         # 4 - compute decryption exponent
         d = Utils.multiplicative_inverse(e, totient)
 
-        # DEBUG 
-        if ((e * d) % totient != 1):
-            print("e and d are NOT inverses")
+        self.e = e
+        self.d = d
+        self.n = n
+        self.p = p
+        self.q = q
 
-        self.encryptionExp = e
-        self.decryptionExp = d
-        self.modulus = n
-
-    def encrypt(self, encodedMessage):
-        return pow(encodedMessage, self.encryptionExp, self.modulus)
+    def encrypt(self, messageString):
+        encodedMessage = Utils.encodeText(messageString)
+        return pow(encodedMessage, self.e, self.n)
 
     def decrypt(self, ciphertext):
-        return pow(ciphertext, self.decryptionExp, self.modulus)
+        decrypted = pow(ciphertext, self.d, self.n)
+        return Utils.decodeBits(decrypted)
 
 crypt = RSA()
 crypt.generateKeys()
 
-ciphertext = crypt.encrypt(15)
-#print("encryption result:\n", ciphertext)
+ciphertext = crypt.encrypt(input("Enter text\n>> "))
+print("encryption result:\n", hex(ciphertext))
 
 decrypted = crypt.decrypt(ciphertext)
 print("decryption result:\n", decrypted)
