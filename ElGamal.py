@@ -13,20 +13,13 @@ class ElGamal:
         self.publicKey = None
         self.privateKey = None
         self.p = None
-        self.q = None
-        self.q = None
+        self.g = None
     
     def generateKeys(self):
         # 1 - compute p & q
-        p = 2
-        while not Utils.miller_rabin(p):
-            q = Utils.randomLargePrime(256)
-            p = (2 * q) + 1
-        
-        # 2 - find a generator
-        g = random.randint(2, q)
-        while not (pow(g, q, p) and g ** 2 != 1):
-            g = random.randint(2, q)
+        group = Utils.getGroupWithGenerator(256)
+        p = group[0]
+        g = group[1]
 
         # 3 - compute private and public keys
         b = random.randint(2, p)
@@ -35,7 +28,6 @@ class ElGamal:
         self.publicKey = B
         self.privateKey = b
         self.p = p
-        self.q = q
         self.g = g
 
     def encrypt(self, messageString):
@@ -59,7 +51,7 @@ crypt = ElGamal()
 crypt.generateKeys()
 
 r, t = crypt.encrypt(input("Enter text\n>> "))
-print("encryption results:\nr: ", r, "\n\nt: ", t, "\n")
+print("encryption results:\nr: ", hex(r), "\n\nt: ", hex(t), "\n")
 
 decrypted = crypt.decrypt(r, t)
 print("decryption result:\n" + str(decrypted))

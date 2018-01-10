@@ -93,3 +93,18 @@ def decodeBits(encodedInt):
         decoded = chr(bitMask & encoded) + decoded
         encoded >>= 8
     return decoded
+
+def getGroupWithGenerator(bitLength):
+    # returns a prime p along with a
+    # generator g of Z_p
+    p = 2
+    while not miller_rabin(p):
+        q = randomLargePrime(bitLength)
+        p = (2 * q) + 1
+    
+    # 2 - find a generator
+    g = random.randint(2, q)
+    while not (pow(g, q, p) and g ** 2 != 1):
+        g = random.randint(2, q)
+    
+    return (p, g)

@@ -22,7 +22,6 @@ class RSA:
 
         # 2 - compute the modulus
         n = p * q
-        print(f"p: {p}\nq: {q}")
         totient = (p - 1) * (q - 1)
 
         # 3 - pick encryption exponent
