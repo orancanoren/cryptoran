@@ -12,6 +12,8 @@ import datetime
 random.seed((datetime.datetime.now() 
     - datetime.datetime.utcfromtimestamp(0)).total_seconds())
 
+# MARK: primality testing & other related functions
+
 def miller_rabin(n, confidence = 40):
     if n == 3:
         return True
@@ -77,6 +79,7 @@ def crt(moduli, remainders):
         total += remainder * y_i * z_i % mod_product
     return total % mod_product
 
+# MARK: encoding / decoding
 def encodeText(messageString):
     encoded = 0
     for c in messageString:
@@ -93,6 +96,20 @@ def decodeBits(encodedInt):
         decoded = chr(bitMask & encoded) + decoded
         encoded >>= 8
     return decoded
+
+def divideToBlocks(messageString, blockBitLength):
+    mask = 2**(blockBitLength - 1) - 1
+    blocks = []
+
+    encodedInteger = encodeText(messageString)
+    while encodedInteger > 0:
+        currentBlock = encodedInteger & mask
+        blocks.insert(0, currentBlock)
+        encodedInteger >>= blockBitLength
+    
+    return blocks
+
+# MARK: number theoretic tools
 
 def getGroupWithGenerator(bitLength):
     # returns a prime p along with a
