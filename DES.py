@@ -11,14 +11,10 @@ class DESround:
     @staticmethod
     def permute(bits, permutationBox):
         permutedBits = 0
-        for bit in permutationBox:
-            if bits >> bit & 0b1:
-                # set bit
-                permutedBits |= (1 << bit)
-            else:
-                # clear bit
-                permutedBits &= ~(1 << bit)# PROBLEM WITH NEGATION
-        
+        for position, bit in enumerate(permutationBox):
+            if bits >> (bit - 1) & 0b1:
+                permutedBits |= (1 << (len(permutationBox) - position - 1))
+
         return permutedBits
 
     @staticmethod
@@ -31,7 +27,7 @@ class DESround:
                 59, 51, 43, 35, 27, 19, 11, 3,
                 61, 53, 45, 37, 29, 21, 13, 5,
                 63, 55, 47, 39, 31, 23, 15, 7]
-        
+
         return DESround.permute(block, IP)
 
     @staticmethod
@@ -189,8 +185,6 @@ class DESround:
 
 class DES:
     def __init__(self, key):
-        if not 2**63 <= key < 2**64:
-            raise ValueError("Key should be exactly 8 bytes long")
         self.key = key
         self.roundKeys = [0]*16
 
@@ -245,14 +239,12 @@ class DES:
             self.generateRoundKeys()
 
         blocks = Utils.divideToBlocks(messageString, 64) # DES uses 64-bit plaintext blocks
-        print([f"plaintext block {i}: {hex(block)}" for i, block in enumerate(blocks)])
+        #print([f"plaintext block {i}: {hex(block)}" for i, block in enumerate(blocks)])
         encryptedBlocks = []
 
         for block in blocks:
             # 1 - obtain the initial permutation
-            print("before initial permutation:", bin(block))
             permutedBlock = DESround.initialPermutation(block)
-            print(" after initial permutation:", bin(permutedBlock))
 
             # 2 - apply 16 rounds of DES
             for i in range(16):
@@ -265,10 +257,39 @@ class DES:
         
         return encryptedBlocks
 
-key = 2**63 | 2**57 | 2** 49 | 0b11011001
+    def decrypt(self, ciphertextBlocks):
+        if self.roundKeys == []:
+            self.generateRoundKeys()
+
+        decryptedBlocks = []
+        for block in ciphertextBlocks:
+            permutedBlock = DESround.reverseInitialPermutation(block)
+
+            for i in range(16):
+                # apply rounds in reverse order
+                block = DESround.applyRound(block, self.roundKeys[15 - i])
+
+            decryptedBlock = DESround.initialPermutation(block)
+            decryptedBlocks.append(Utils.decodeBits(decryptedBlock))
+        
+        return ''.join(decryptedBlocks)
+
+
+key = 0x5b5a57676a56676e
+#key = 2**63 | 2**57 | 2** 49 | 0b11011001
 print(f"DES key: {hex(key)}\n")
 
 crypt = DES(key)
-encryptedBlocks = crypt.encrypt("asytq")
+encryptedBlocks = crypt.encrypt("Elton John - Your Song\n" + 
+'''
+It's a little bit funny this feeling inside
+I'm not one of those who can easily hide
+I don't have much money but boy if I did...
+''')
+decryptionResult = crypt.decrypt(encryptedBlocks)
 
-print([f"encrypted block {i}: {hex(block)}" for i, block in enumerate(encryptedBlocks)])
+for i, block in enumerate(encryptedBlocks):
+    print(f"encrypted block {i}: {hex(block)}")
+print()
+
+print(f"decryption result:\n{decryptionResult}")
