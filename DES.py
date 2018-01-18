@@ -1,4 +1,5 @@
 import Utils
+import datetime
 
 # ==============================================
 # Data Encryption Standard (DES) Implementation 
@@ -274,11 +275,11 @@ class DES:
         
         return ''.join(decryptedBlocks)
 
-
 key = 0x5b5a57676a56676e
 #key = 2**63 | 2**57 | 2** 49 | 0b11011001
 print(f"DES key: {hex(key)}\n")
 
+begin = datetime.datetime.now()
 crypt = DES(key)
 encryptedBlocks = crypt.encrypt("Elton John - Your Song\n" + 
 '''
@@ -286,10 +287,15 @@ It's a little bit funny this feeling inside
 I'm not one of those who can easily hide
 I don't have much money but boy if I did...
 ''')
-decryptionResult = crypt.decrypt(encryptedBlocks)
+end = datetime.datetime.now()
 
+print(f"Encryption done in {(end - begin).microseconds // 1000} ms\n")
 for i, block in enumerate(encryptedBlocks):
     print(f"encrypted block {i}: {hex(block)}")
 print()
 
-print(f"decryption result:\n{decryptionResult}")
+begin = datetime.datetime.now()
+decryptionResult = crypt.decrypt(encryptedBlocks)
+end = datetime.datetime.now()
+
+print(f"decryption done in {(end - begin).microseconds // 1000} ms\n{decryptionResult}")
