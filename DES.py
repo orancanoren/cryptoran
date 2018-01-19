@@ -218,14 +218,13 @@ class DES:
             self.roundKeys[i] = DESround.permute((leftHalfKey << 28) | rightHalfKey, shiftRoundPerm, 56, 48)
 
     # ELECTRONIC CODEBOOK MODE OF OPERATION IS USED
-    def _operate(self, messageString, decrypt = False):
+    def _operate(self, blocks, decrypt = False):
         if self.roundKeys[0] == 0:
             self._generateRoundKeys()
 
-        #blocks = Utils.divideToBlocks(messageString, 64) # DES uses 64-bit plaintext blocks
-        blocks = []
-        blocks.append(messageString)
         processedBlocks = []
+
+        #print("blocks:", blocks)
         
         for i, block in enumerate(blocks):
             # 1 - obtain the initial permutation
@@ -249,10 +248,13 @@ class DES:
         return processedBlocks
 
     def encrypt(self, messageString):
-        return self._operate(messageString, False)
+        blocks = Utils.divideToBlocks(messageString, 64) # DES uses 64-bit plaintext blocks
+        return self._operate(blocks, False)
 
     def decrypt(self, ciphertextBlocks):
-        return self._operate(ciphertextBlocks, True)
+        decrypted = self._operate(ciphertextBlocks, True)
+        decoded = ''.join([Utils.decodeBits(decryptedBlock) for decryptedBlock in decrypted])
+        return decoded
 
 key = 0b0001001100110100010101110111100110011011101111001101111111110001
 print(f"DES key: {hex(key)}\n")
@@ -266,7 +268,7 @@ I'm not one of those who can easily hide
 I don't have much money but boy if I did...
 ''' 
 
-encryptedBlocks = crypt.encrypt(0b0000000100100011010001010110011110001001101010111100110111101111)
+encryptedBlocks = crypt.encrypt(plaintext)
 end = datetime.datetime.now()
 
 print(f"Encryption done in {(end - begin).microseconds // 1000} ms\n")
@@ -275,7 +277,7 @@ for i, block in enumerate(encryptedBlocks):
 print()
 
 begin = datetime.datetime.now()
-decryptionResult = crypt.decrypt(encryptedBlocks[0])
+decryptionResult = crypt.decrypt(encryptedBlocks)
 end = datetime.datetime.now()
 
-print(f"decryption done in {(end - begin).microseconds // 1000} ms:\n{hex(decryptionResult[0])}")
+print(f"decryption done in {(end - begin).microseconds // 1000} ms:\n{decryptionResult}")
