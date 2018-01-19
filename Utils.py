@@ -98,7 +98,7 @@ def decodeBits(encodedInt):
     return decoded
 
 def divideToBlocks(messageString, blockBitLength):
-    mask = 2**(blockBitLength - 1) - 1
+    mask = 2**blockBitLength - 1
     blocks = []
 
     encodedInteger = encodeText(messageString)

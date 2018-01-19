@@ -1,5 +1,6 @@
 import Utils
 import datetime
+import os
 
 # ==============================================
 # Data Encryption Standard (DES) Implementation 
@@ -10,11 +11,11 @@ import datetime
 # MARK: class DESround begins
 class DESround:
     @staticmethod
-    def permute(bits, permutationBox):
+    def permute(bits, permutationBox, inputBitLength, outputBitLength):
         permutedBits = 0
         for position, bit in enumerate(permutationBox):
-            if bits >> (bit - 1) & 0b1:
-                permutedBits |= (1 << (len(permutationBox) - position - 1))
+            if bits >> (inputBitLength - bit) & 0b1: #!!!!
+                permutedBits |= 1 << (outputBitLength - position - 1)
 
         return permutedBits
 
@@ -29,20 +30,7 @@ class DESround:
                 61, 53, 45, 37, 29, 21, 13, 5,
                 63, 55, 47, 39, 31, 23, 15, 7]
 
-        return DESround.permute(block, IP)
-
-    @staticmethod
-    def reverseInitialPermutation(block):
-        rev_IP = [40, 8, 48, 16, 56, 24, 64, 32,
-                    39, 7, 47, 15, 55, 23, 63, 31,
-                    38, 6, 46, 14, 54, 22, 62, 30,
-                    37, 5, 45, 13, 53, 21, 61, 29,
-                    36, 4, 44, 12, 52, 20, 60, 28,
-                    35, 3, 43, 11, 51, 19, 59, 27,
-                    34, 2, 42, 10, 50, 18, 58, 26,
-                    33, 1, 41, 9, 49, 17, 57, 25]
-
-        return DESround.permute(block, rev_IP)
+        return DESround.permute(block, IP, 64, 64)
 
     @staticmethod
     def finalPermutation(block):
@@ -55,7 +43,7 @@ class DESround:
                 34, 2, 42, 10, 50, 18, 58, 26,
                 33, 1, 41, 9, 49, 17, 57, 25]
         
-        return DESround.permute(block, F_Perm)
+        return DESround.permute(block, F_Perm, 64, 64)
     
     @staticmethod
     def expansion(halfBlock):
@@ -68,7 +56,7 @@ class DESround:
                         24, 25, 26, 27, 28, 29,
                         28, 29, 30, 31, 32, 1]
 
-        return DESround.permute(halfBlock, expansionBox)
+        return DESround.permute(halfBlock, expansionBox, 32, 48)
 
     @staticmethod
     def substitutionBox(keyMixedHalfBlock):
@@ -121,12 +109,11 @@ class DESround:
             [2, 1, 14, 7, 4, 10, 8, 13, 15, 12, 9, 0, 3, 5, 6, 11],
             ]
         ]
-
         substitutionResults = []
         mask = 0b111111
         currentBits = 0
         mixedBlock = int(keyMixedHalfBlock)
-        for box in S_BOX:
+        for box in S_BOX[::-1]:
             currentBits = mask & mixedBlock
             mixedBlock >>= 6
 
@@ -134,27 +121,22 @@ class DESround:
             sboxCol = (currentBits & 0b011110) >> 1
             substitutionResults.append(box[sboxRow][sboxCol])
 
-        return substitutionResults
+        substitutionResult = 0
+        for quartet in substitutionResults[::-1]:
+            substitutionResult |= quartet
+            substitutionResult <<= 4
+        substitutionResult >>= 4
+
+        return substitutionResult
 
     @staticmethod
-    def permutationBox(substitutionResults):
-
+    def permutationBox(substitutionResult):
         P = [16, 7, 20, 21, 29, 12, 28, 17,
             1, 15, 23, 26, 5, 18, 31, 10,
             2, 8, 24, 14, 32, 27, 3, 9,
             19, 13, 30, 6, 22, 11, 4, 25]
 
-        permutationResult = 0
-        for perm in P:
-            quartet = perm // 8
-            bitOffset = perm % 8
-            
-            if substitutionResults[quartet] >> bitOffset & 0b1:
-                permutationResult |= 1 << bitOffset
-            else:
-                permutationResult &= ~(1 << bitOffset)
-
-        return permutationResult
+        return DESround.permute(substitutionResult, P, 32, 32)
 
     @staticmethod
     def feistelFunction(rightHalf, roundKey):
@@ -173,11 +155,10 @@ class DESround:
         return permuted
 
     @staticmethod
-    def applyRound(block, roundKey):
-        leftHalf = block >> 32
-        rightHalf = block & (2**32 - 1)
+    def applyRound(leftHalf, rightHalf, roundKey):
+        f = DESround.feistelFunction(rightHalf, roundKey)
 
-        newRigtHalf = leftHalf ^ DESround.feistelFunction(rightHalf, roundKey)
+        newRigtHalf = leftHalf ^ f
 
         permutedBlock = (rightHalf << 32) + newRigtHalf
 
@@ -212,47 +193,57 @@ class DES:
 
         def shiftBits(bits, shiftAmount):
             # <bits> should be 28-bits long
-            lastBits = bits & 0b1 if shiftAmount == 1 else bits & 0b11
-            bits >>= shiftAmount
-            
+            # 1 - check most significant bits
+            # 2 - clear most significant bits, shift by appropriate amount
+            # and place previous MSB to LSB
             if shiftAmount == 1:
-                bits |= lastBits << 27
+                msb = (bits >> 27) | 0b0
+                bits &= 2**27 - 1
+                bits <<= 1
+                bits |= msb
             else:
-                bits |= lastBits << 26
-
+                msb = (bits >> 26) | 0b00
+                bits &= 2**26 - 1
+                bits <<= 2
+                bits |= msb
             return bits
 
-        permutedKey = DESround.permute(self.key >> 8, initKeyPerm)
+        permutedKey = DESround.permute(self.key, initKeyPerm, 64, 56)
         leftHalfKey = permutedKey >> 28
-        rightHalfKey = permutedKey & ~(2**28 - 1)
+        rightHalfKey = permutedKey & (2**28 - 1)
         for i in range(16): # generate a 48-bit key for each round
-            shiftBits(leftHalfKey, shift[i])
-            shiftBits(rightHalfKey, shift[i])
+            leftHalfKey = shiftBits(leftHalfKey, shift[i])
+            rightHalfKey = shiftBits(rightHalfKey, shift[i])
 
-            leftHalfKey = DESround.permute(leftHalfKey, shiftRoundPerm)
-            rightHalfKey = DESround.permute(rightHalfKey, shiftRoundPerm)
-
-            self.roundKeys[i] = (leftHalfKey << 28) | rightHalfKey
+            self.roundKeys[i] = DESround.permute((leftHalfKey << 28) | rightHalfKey, shiftRoundPerm, 56, 48)
 
     # ELECTRONIC CODEBOOK MODE OF OPERATION IS USED
-    def encrypt(self, messageString):
-        if self.roundKeys == []:
+    def operate(self, messageString, decrypt = False):
+        if self.roundKeys[0] == 0:
             self.generateRoundKeys()
 
-        blocks = Utils.divideToBlocks(messageString, 64) # DES uses 64-bit plaintext blocks
-        #print([f"plaintext block {i}: {hex(block)}" for i, block in enumerate(blocks)])
+        #blocks = Utils.divideToBlocks(messageString, 64) # DES uses 64-bit plaintext blocks
         encryptedBlocks = []
 
-        for block in blocks:
+        blocks = []
+        blocks.append(messageString)
+        for i, block in enumerate(blocks):
+            print(f"plaintext block {i}: {bin(block)}")
             # 1 - obtain the initial permutation
-            permutedBlock = DESround.initialPermutation(block)
-
+            block = DESround.initialPermutation(block)
             # 2 - apply 16 rounds of DES
             for i in range(16):
-                block = DESround.applyRound(block, self.roundKeys[i])
-            
+                leftHalf = block >> 32
+                rightHalf = block & (2**32 - 1)
+                currentKey = None
+                block = DESround.applyRound(leftHalf, rightHalf, self.roundKeys[i])
+
+            # apply the final permutation to the block having its left and right halves switched
+            leftHalf = block >> 32
+            rightHalf = block & (2**32 - 1)
+
             # 3 - apply final permutation
-            cipheredBlock = DESround.finalPermutation(block)
+            cipheredBlock = DESround.finalPermutation((rightHalf << 32) | leftHalf)
             
             encryptedBlocks.append(cipheredBlock)
         
@@ -264,38 +255,44 @@ class DES:
 
         decryptedBlocks = []
         for block in ciphertextBlocks:
-            permutedBlock = DESround.reverseInitialPermutation(block)
+            leftHalf = block >> 32
+            rightHalf = block & (2**32 - 1)
+            block = DESround.finalPermutation((rightHalf << 32) | leftHalf)
 
             for i in range(16):
                 # apply rounds in reverse order
-                block = DESround.applyRound(block, self.roundKeys[15 - i])
+                leftHalf = block >> 32
+                rightHalf = block & (2**32 - 1)
+                block = DESround.applyRound(leftHalf, rightHalf, self.roundKeys[15 - i])
 
             decryptedBlock = DESround.initialPermutation(block)
+            print("plaintext:", bin(decryptedBlock))
             decryptedBlocks.append(Utils.decodeBits(decryptedBlock))
         
         return ''.join(decryptedBlocks)
 
-key = 0x5b5a57676a56676e
+key = 0b0001001100110100010101110111100110011011101111001101111111110001
 #key = 2**63 | 2**57 | 2** 49 | 0b11011001
 print(f"DES key: {hex(key)}\n")
 
 begin = datetime.datetime.now()
 crypt = DES(key)
-encryptedBlocks = crypt.encrypt("Elton John - Your Song\n" + 
-'''
+plaintext = "Elton John - Your Song\n" + '''
 It's a little bit funny this feeling inside
 I'm not one of those who can easily hide
 I don't have much money but boy if I did...
-''')
+''' 
+
+encryptedBlocks = crypt.operate(0b0000000100100011010001010110011110001001101010111100110111101111, plaintext)
 end = datetime.datetime.now()
 
 print(f"Encryption done in {(end - begin).microseconds // 1000} ms\n")
 for i, block in enumerate(encryptedBlocks):
     print(f"encrypted block {i}: {hex(block)}")
 print()
-
+'''
 begin = datetime.datetime.now()
-decryptionResult = crypt.decrypt(encryptedBlocks)
+decryptionResult = crypt.operate(encryptedBlocks[0], True)
 end = datetime.datetime.now()
 
-print(f"decryption done in {(end - begin).microseconds // 1000} ms\n{decryptionResult}")
+print(f"decryption done in {(end - begin).microseconds // 1000} ms\n{bin(decryptionResult[0])}")'''
