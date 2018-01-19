@@ -170,7 +170,7 @@ class DES:
         self.key = key
         self.roundKeys = [0]*16
 
-    def generateRoundKeys(self):
+    def _generateRoundKeys(self):
         shift = [1,1,2,2,2,2,2,2,1,2,2,2,2,2,2,1]
 
         # initial permutation on key
@@ -218,25 +218,24 @@ class DES:
             self.roundKeys[i] = DESround.permute((leftHalfKey << 28) | rightHalfKey, shiftRoundPerm, 56, 48)
 
     # ELECTRONIC CODEBOOK MODE OF OPERATION IS USED
-    def operate(self, messageString, decrypt = False):
+    def _operate(self, messageString, decrypt = False):
         if self.roundKeys[0] == 0:
-            self.generateRoundKeys()
+            self._generateRoundKeys()
 
         #blocks = Utils.divideToBlocks(messageString, 64) # DES uses 64-bit plaintext blocks
-        encryptedBlocks = []
-
         blocks = []
         blocks.append(messageString)
+        processedBlocks = []
+        
         for i, block in enumerate(blocks):
-            print(f"plaintext block {i}: {bin(block)}")
             # 1 - obtain the initial permutation
             block = DESround.initialPermutation(block)
             # 2 - apply 16 rounds of DES
             for i in range(16):
                 leftHalf = block >> 32
                 rightHalf = block & (2**32 - 1)
-                currentKey = None
-                block = DESround.applyRound(leftHalf, rightHalf, self.roundKeys[i])
+                currentKey = self.roundKeys[i] if not decrypt else self.roundKeys[15 - i]
+                block = DESround.applyRound(leftHalf, rightHalf, currentKey)
 
             # apply the final permutation to the block having its left and right halves switched
             leftHalf = block >> 32
@@ -245,54 +244,38 @@ class DES:
             # 3 - apply final permutation
             cipheredBlock = DESround.finalPermutation((rightHalf << 32) | leftHalf)
             
-            encryptedBlocks.append(cipheredBlock)
+            processedBlocks.append(cipheredBlock)
         
-        return encryptedBlocks
+        return processedBlocks
+
+    def encrypt(self, messageString):
+        return self._operate(messageString, False)
 
     def decrypt(self, ciphertextBlocks):
-        if self.roundKeys == []:
-            self.generateRoundKeys()
-
-        decryptedBlocks = []
-        for block in ciphertextBlocks:
-            leftHalf = block >> 32
-            rightHalf = block & (2**32 - 1)
-            block = DESround.finalPermutation((rightHalf << 32) | leftHalf)
-
-            for i in range(16):
-                # apply rounds in reverse order
-                leftHalf = block >> 32
-                rightHalf = block & (2**32 - 1)
-                block = DESround.applyRound(leftHalf, rightHalf, self.roundKeys[15 - i])
-
-            decryptedBlock = DESround.initialPermutation(block)
-            print("plaintext:", bin(decryptedBlock))
-            decryptedBlocks.append(Utils.decodeBits(decryptedBlock))
-        
-        return ''.join(decryptedBlocks)
+        return self._operate(ciphertextBlocks, True)
 
 key = 0b0001001100110100010101110111100110011011101111001101111111110001
-#key = 2**63 | 2**57 | 2** 49 | 0b11011001
 print(f"DES key: {hex(key)}\n")
 
 begin = datetime.datetime.now()
 crypt = DES(key)
+
 plaintext = "Elton John - Your Song\n" + '''
 It's a little bit funny this feeling inside
 I'm not one of those who can easily hide
 I don't have much money but boy if I did...
 ''' 
 
-encryptedBlocks = crypt.operate(0b0000000100100011010001010110011110001001101010111100110111101111, plaintext)
+encryptedBlocks = crypt.encrypt(0b0000000100100011010001010110011110001001101010111100110111101111)
 end = datetime.datetime.now()
 
 print(f"Encryption done in {(end - begin).microseconds // 1000} ms\n")
 for i, block in enumerate(encryptedBlocks):
     print(f"encrypted block {i}: {hex(block)}")
 print()
-'''
+
 begin = datetime.datetime.now()
-decryptionResult = crypt.operate(encryptedBlocks[0], True)
+decryptionResult = crypt.decrypt(encryptedBlocks[0])
 end = datetime.datetime.now()
 
-print(f"decryption done in {(end - begin).microseconds // 1000} ms\n{bin(decryptionResult[0])}")'''
+print(f"decryption done in {(end - begin).microseconds // 1000} ms:\n{hex(decryptionResult[0])}")
