@@ -79,36 +79,6 @@ def crt(moduli, remainders):
         total += remainder * y_i * z_i % mod_product
     return total % mod_product
 
-# MARK: encoding / decoding
-def encodeText(messageString):
-    encoded = 0
-    for c in messageString:
-        encoded <<= 8
-        encoded += ord(c)
-    return encoded
-
-def decodeBits(encodedInt):
-    decoded = ""
-    encoded = int(encodedInt) # create a copy
-    bitMask = 0b11111111
-
-    while encoded != 0:
-        decoded = chr(bitMask & encoded) + decoded
-        encoded >>= 8
-    return decoded
-
-def divideToBlocks(messageString, blockBitLength):
-    mask = 2**blockBitLength - 1
-    blocks = []
-
-    encodedInteger = encodeText(messageString)
-    while encodedInteger > 0:
-        currentBlock = encodedInteger & mask
-        blocks.insert(0, currentBlock)
-        encodedInteger >>= blockBitLength
-    
-    return blocks
-
 # MARK: number theoretic tools
 
 def getGroupWithGenerator(bitLength):

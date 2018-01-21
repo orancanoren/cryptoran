@@ -1,4 +1,5 @@
 import Utils
+import Encoding
 import random
 import sys #sys.exit()
 
@@ -31,7 +32,7 @@ class ElGamal:
         self.g = g
 
     def encrypt(self, messageString):
-        encodedMessage = Utils.encodeText(messageString)
+        encodedMessage = Encoding.encodeText(messageString)
         if encodedMessage >= self.p:
             print("Message too large, cannot encrypt!")
             sys.exit()
@@ -45,7 +46,7 @@ class ElGamal:
         r_inv = Utils.multiplicative_inverse(r, self.p)
         r_inv_b = pow(r_inv, self.privateKey, self.p)
         decrypted = (r_inv_b * t) % self.p
-        return Utils.decodeBits(decrypted)
+        return Encoding.decodeBits(decrypted)
 
 crypt = ElGamal()
 crypt.generateKeys()
