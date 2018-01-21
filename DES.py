@@ -1,4 +1,4 @@
-import Utils
+import Encoding
 import datetime
 import os
 
@@ -248,12 +248,12 @@ class DES:
         return processedBlocks
 
     def encrypt(self, messageString):
-        blocks = Utils.divideToBlocks(messageString, 64) # DES uses 64-bit plaintext blocks
+        blocks = Encoding.divideToBlocks(messageString, 64) # DES uses 64-bit plaintext blocks
         return self._operate(blocks, False)
 
     def decrypt(self, ciphertextBlocks):
         decrypted = self._operate(ciphertextBlocks, True)
-        decoded = ''.join([Utils.decodeBits(decryptedBlock) for decryptedBlock in decrypted])
+        decoded = ''.join([Encoding.decodeBits(decryptedBlock) for decryptedBlock in decrypted])
         return decoded
 
 key = 0b0001001100110100010101110111100110011011101111001101111111110001

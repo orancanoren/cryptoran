@@ -1,5 +1,5 @@
 import Utils
-
+import os
 # =================================================
 # Advanced Encryption Standard (AES) Implementation 
 # Author: Oran Can Oren
@@ -11,6 +11,7 @@ import Utils
 class AES:
     def __init__(self, key):
         self.key = key
+        self.roundKeys = [0]*44
 
     # MARK: class AESlayer begins
     class AESlayer:
@@ -115,4 +116,25 @@ class AES:
 
         @staticmethod
         def mixColumns(stateArray, inverse = False):
+            transformationMatrix = [[2, 3, 1, 1],
+                                    [1, 2, 3, 1],
+                                    [1, 1, 2, 3],
+                                    [3, 1, 1, 2]]
+            
+            dotMultiplicationResult = []
+            for i, row in enumerate(transformationMatrix):
+                for k in range(4):
+                    currentByte = 0
+                    for j, element in enumerate(row):
+                        currentByte ^= stateArray[(j * 4) + k] * element
+                    dotMultiplicationResult.append(currentByte)
+                    
+            return dotMultiplicationResult
+        # MARK: class AESlayer ends
+
+    def _generateRoundKeys(self):
         
+        
+    def _encrypt(self, block):
+        if self.roundKeys[0] == 0:
+            self._generateRoundKeys()

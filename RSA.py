@@ -1,4 +1,5 @@
 import Utils
+import Encoding
 import random
 
 # ==============================================
@@ -32,19 +33,17 @@ class RSA:
         # 4 - compute decryption exponent
         d = Utils.multiplicative_inverse(e, totient)
 
-        self.e = e
-        self.d = d
-        self.n = n
-        self.p = p
-        self.q = q
+        self.encryptionExp = e
+        self.decryptionExp = d
+        self.modulus = n
 
     def encrypt(self, messageString):
-        encodedMessage = Utils.encodeText(messageString)
-        return pow(encodedMessage, self.e, self.n)
+        encodedMessage = Encoding.encodeText(messageString)
+        return pow(encodedMessage, self.encryptionExp, self.modulus)
 
     def decrypt(self, ciphertext):
-        decrypted = pow(ciphertext, self.d, self.n)
-        return Utils.decodeBits(decrypted)
+        decrypted = pow(ciphertext, self.decryptionExp, self.modulus)
+        return Encoding.decodeBits(decrypted)
 
 crypt = RSA()
 crypt.generateKeys()
