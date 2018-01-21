@@ -3,3 +3,6 @@
 <hr />
 This repo provides Python 3 implementations of various cryptosystems and protocols.
 They are intended for educational purposes only, these implementations are not cryptographically secure (e.g. Python's <i>random</i> library was used for PRNG, it uses linear congruential generators which are cryptographically insecure).
+<hr />
+<h3>Notes</h3>
+AES is still under development
