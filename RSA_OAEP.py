@@ -8,11 +8,14 @@ import random
 # Email: orancanoren@gmail.com
 # ==============================================
 
-class RSA:
+class RSAOAEP:
     def __init__(self):
         self.encryptionExp = None
         self.decryptionExp = None
         self.modulus = None
+        self.OAEPblockSize = None
+        self.OAEPk0 = None
+        self.OAEPk1 = None
 
     def generateKeys(self):
         # 1 - pick primes
@@ -39,13 +42,21 @@ class RSA:
 
     def encrypt(self, messageString):
         encodedMessage = Encoding.encodeText(messageString)
-        return pow(encodedMessage, self.encryptionExp, self.modulus)
+        encoder = Encoding.OAEP(500)
+        self.OAEPblockSize, self.OAEPk0, self.OAEPk1 = encoder.generateOAEPparams()
+        OAEPencodedMessage = encoder.encode(encodedMessage)
+        return pow(OAEPencodedMessage, self.encryptionExp, self.modulus)
 
     def decrypt(self, ciphertext):
-        decrypted = pow(ciphertext, self.decryptionExp, self.modulus)
-        return Encoding.decodeBits(decrypted)
+        if self.OAEPblockSize == None or self.OAEPk0 == None or self.OAEPk1 == None:
+            raise ValueError("OAEP parameters are not ready at time of decryption")
 
-crypt = RSA()
+        decrypted = pow(ciphertext, self.decryptionExp, self.modulus)
+        OAEPencoder = Encoding.OAEP(self.OAEPblockSize, self.OAEPk0, self.OAEPk1)
+        OAEPdecoded = OAEPencoder.decode(decrypted)
+        return Encoding.decodeBits(OAEPdecoded)
+
+crypt = RSAOAEP()
 crypt.generateKeys()
 
 ciphertext = crypt.encrypt(input("Enter text\n>> "))

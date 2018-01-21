@@ -45,6 +45,15 @@ class OAEP:
         self.k0 = k0
         self.k1 = k1
 
+    def generateOAEPparams(self):
+        if self.k0 == None:
+            self.k0 = random.randrange(1 << 127, (1 << 128) - 1)
+        if self.k1 == None:
+            self.k1 = random.randrange(1 << 127, (1 << 128) - 1)
+        if self.blockLength == None:
+            self.blockLength = 1024
+        return (self.blockLength, self.k0, self.k1)
+
     def _G(self, r):
         k0len = self.k0.bit_length()
         result = 0
@@ -73,13 +82,8 @@ class OAEP:
         return result
     
     def encode(self, messageBits):
-        if self.blockLength == None:
-            self.blockLength = 1024
-        if self.k0 == None or self.k1 == None:
-            # set k0 and k1 to 128-bit random integers
-            self.k0 = random.randrange(1 << 127, (1 << 128) - 1)
-            self.k1 = random.randrange(1 << 127, (1 << 128) - 1)
-            print("New OAEP parameters:\nk0:", hex(self.k0), "\nk1:", hex(self.k1))
+        if self.k0 == None or self.k1 == None or self.blockLength == None:
+            self.generateOAEPparams()
 
         k0len = self.k0.bit_length()
         k1len = self.k1.bit_length()
@@ -100,9 +104,9 @@ class OAEP:
 
         return (x << k0len) | y
 
-    def decode(self, encodedBits, blockLength, k0, k1):
+    def decode(self, encodedBits):
         # Seperate X and Y
-        k0len = k0.bit_length()
+        k0len = self.k0.bit_length()
         y = encodedBits & (2**k0len - 1)
         x = encodedBits >> k0len
 
@@ -112,4 +116,4 @@ class OAEP:
         # 2 - recover the padded message:
         paddedMessage = x ^ self._G(r)
 
-        return paddedMessage >> k1.bit_length()
+        return paddedMessage >> self.k1.bit_length()
