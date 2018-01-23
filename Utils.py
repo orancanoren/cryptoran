@@ -48,10 +48,13 @@ def miller_rabin(n, confidence = 40):
         composite = False
     return True
 
+def randomNumber(bitLength):
+    return random.randint((1 << bitLength - 1) + 1, (1 << bitLength))
+
 def randomLargePrime(bitLength):
     a = 2
     while not miller_rabin(a):
-        a = random.randint((1 << bitLength - 1) + 1, (1 << bitLength))
+        a = randomNumber(bitLength)
     return a
 
 def EEA(a, b):
