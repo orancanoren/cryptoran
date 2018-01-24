@@ -3,18 +3,19 @@ import Utils
 import os
 # =================================================
 # Advanced Encryption Standard (AES) Implementation 
+# Implemented for 128 bit keys
 # Author: Oran Can Oren
 # Email: orancanoren@gmail.com
 # =================================================
 
-# AES - 128
-
 # MARK: class AESlayer begins
 class AESlayer:
     @staticmethod
-    def addRoundKey(stateArray, key, inverse = False):
-        for i, word in enumerate(key):
-            stateArray[i] ^= word
+    def addRoundKey(stateArray, key, verbose = False, inverse = False):
+        for i in range(16):
+            currentKeyByte = key & 0b11111111
+            key >>= 8
+            stateArray[15 - i] ^= currentKeyByte
         return stateArray
 
     @staticmethod
@@ -73,6 +74,7 @@ class AESlayer:
         0x61, 0x17, 0x2b, 0x04, 0x7e, 0xba, 0x77, 0xd6, 0x26, 0xe1, 
         0x69, 0x14, 0x63, 0x55, 0x21, 0x0c, 0x7d]
 
+        #print("sarray", stateArray)
         if inverse:
             stateArray = [Si[x] for x in stateArray]
         else:
@@ -84,29 +86,29 @@ class AESlayer:
     def shiftRows(stateArray, inverse = False):
         if not inverse:
             # shift 2nd row to left by 1
-            stateArray[4], stateArray[5], stateArray[6], stateArray[7] = \
-            stateArray[5], stateArray[6], stateArray[7], stateArray[4]
+            stateArray[1], stateArray[5], stateArray[9], stateArray[13] = \
+            stateArray[5], stateArray[9], stateArray[13], stateArray[1]
 
             # shift 3rd row to left by 2
-            stateArray[8], stateArray[9], stateArray[10], stateArray[11] = \
-            stateArray[10], stateArray[11], stateArray[8], stateArray[9]
+            stateArray[2], stateArray[6], stateArray[10], stateArray[14] = \
+            stateArray[10], stateArray[14], stateArray[2], stateArray[6]
 
             # shift 4th row to left by 3
-            stateArray[12], stateArray[13], stateArray[14], stateArray[15] = \
-            stateArray[15], stateArray[12], stateArray[13], stateArray[14]
+            stateArray[3], stateArray[7], stateArray[11], stateArray[15] = \
+            stateArray[15], stateArray[3], stateArray[7], stateArray[11]
         
         else:
             # shift 2nd row to right by 1
-            stateArray[4], stateArray[5], stateArray[6], stateArray[7] = \
-            stateArray[7], stateArray[4], stateArray[5], stateArray[6]
+            stateArray[5], stateArray[9], stateArray[13], stateArray[1] = \
+            stateArray[1], stateArray[5], stateArray[9], stateArray[13]
 
             # shift 3rd row to right by 2
-            stateArray[8], stateArray[9], stateArray[10], stateArray[11] = \
-            stateArray[10], stateArray[11], stateArray[8], stateArray[9]
+            stateArray[10], stateArray[14], stateArray[2], stateArray[6] = \
+            stateArray[2], stateArray[6], stateArray[10], stateArray[14]
 
             # shift 4th row to right by 3
-            stateArray[12], stateArray[13], stateArray[14], stateArray[15] = \
-            stateArray[13], stateArray[14], stateArray[15], stateArray[12]
+            stateArray[15], stateArray[3], stateArray[7], stateArray[11] = \
+            stateArray[3], stateArray[7], stateArray[11], stateArray[15]
 
         return stateArray
 
@@ -116,22 +118,34 @@ class AESlayer:
                                 [1, 2, 3, 1],
                                 [1, 1, 2, 3],
                                 [3, 1, 1, 2]]
-        
-        dotMultiplicationResult = []
+
+        def galoisMult(a, b):
+            p = 0
+            hiBitSet = 0
+            for i in range(8):
+                if b & 1 == 1:
+                    p ^= a
+                hiBitSet = a & 0x80
+                a <<= 1
+                if hiBitSet == 0x80:
+                    a ^= 0x1b
+                b >>= 1
+            return p % 256
+
+        dotMultiplicationResult = [0]*16
         for i, row in enumerate(transformationMatrix):
-            for k in range(4):
+            for j in range(4):
                 currentByte = 0
-                for j, element in enumerate(row):
-                    currentByte ^= stateArray[(j * 4) + k] * element
-                dotMultiplicationResult.append(currentByte)
-                
+                for k in range(4):
+                    currentByte ^= galoisMult(row[k], stateArray[4*j + k])
+                dotMultiplicationResult[4*j + i] = currentByte
         return dotMultiplicationResult
     # MARK: class AESlayer ends
 
 class AES:
     def __init__(self, key):
         self.key = key
-        self.roundKeys = [0]*44
+        self.roundKeys = [0]
 
     def _generateRoundKeys(self):
         key = int(self.key)
@@ -175,27 +189,78 @@ class AES:
             keyMatrix.append(firstWordOfRound)
 
             # 2.6 - W_4k is obtained, remaining 3 words can be derived by simple XOR
+
             for i in range(3):
                 currentIndex = (roundNum * 4) + i + 1
                 keyMatrix.append(keyMatrix[currentIndex - 1] ^ keyMatrix[currentIndex - 4])
 
-        self.roundKeys = keyMatrix
-
+        self.roundKeys = []
+        for i in range(11):
+            roundKey = 0
+            for j in range(4):
+                roundKey <<= 32
+                roundKey |= keyMatrix[i*4 + j]
+            self.roundKeys.append(roundKey)
 
     # ELECTRONIC CODEBOOK MODE OF OPERATION IS USED
     def encrypt(self, messageString):
         if self.roundKeys[0] == 0:
             self._generateRoundKeys()
 
-        print("ROUND KEYS:")
-        for column in self.roundKeys:
-            print(hex(column))
+        blocks = Encoding.divideToBlocks(messageString, 128)
+        encryptedBlocks = []
+        
+        for block in blocks:
+            # seperate bytes of the block to obtain the state array
+            encryptedBlock = []
+            while block > 0:
+                byte = block & 0b11111111
+                block >>= 8
+                encryptedBlock.insert(0, byte)
 
-otherkey = 0x2B7E151628AED2A6ABF7158809CF4F3C
+            # pad block with leading 0's if necessary
+            while len(encryptedBlock) < 16:
+                encryptedBlock.append(0)
+
+            # perform a key addition layer before iterative rounds
+            encryptedBlock = AESlayer.addRoundKey(encryptedBlock, self.key)
+            # first 9 rounds consist of 4 layers
+            for roundNum in range(9):
+                # 1 - byte substitution
+                encryptedBlock = AESlayer.substituteBytes(encryptedBlock)
+
+                # 2 - shift row
+                encryptedBlock = AESlayer.shiftRows(encryptedBlock)
+
+                # 3 - mix column
+                encryptedBlock = AESlayer.mixColumns(encryptedBlock)
+
+                # 4 - key addition
+                encryptedBlock = AESlayer.addRoundKey(encryptedBlock, self.roundKeys[roundNum + 1])
+
+            # last round doesn't have the mix column layer
+            encryptedBlock = AESlayer.substituteBytes(encryptedBlock)
+            encryptedBlock = AESlayer.shiftRows(encryptedBlock)
+            encryptedBlock = AESlayer.addRoundKey(encryptedBlock, self.roundKeys[10])
+
+            # put together the bytes in <encryptedBlock>
+            encryptedBlockInt = 0
+            for byte in encryptedBlock:
+                encryptedBlockInt <<= 8
+                encryptedBlockInt |= byte
+            encryptedBlocks.append(encryptedBlockInt)
+        return encryptedBlocks
+
+    def decrypt(self, ciphertextBlocks):
+        if self.roundKeys[0] == 0:
+            raise ValueError("AES keys not set at time of decryption")
+
+        for block in ciphertextBlocks:
+            decryptedBlock = []
+
 crypt = AES(0x5468617473206D79204B756E67204675)
-crypt.encrypt("hah")
 
-'''
+
 if __name__ == "__main__":
     print("AES-128 Encryption tool")
     AESkey = input("Enter the AES key (leave blank for random key generation):\n>> ")
@@ -209,7 +274,7 @@ if __name__ == "__main__":
 
     encryptedBlocks = crypt.encrypt(messageString)
     for i, block in enumerate(encryptedBlocks):
-        print(f"encrypted block {i}: {block}")
+        print(f"encrypted block {i}: {hex(block)}")
 
     decryptionResult = crypt.decrypt(encrtyptedBlocks)
-    print("Decryption result:\n", decryptionResult)'''
+    print("Decryption result:\n", decryptionResult)
