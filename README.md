@@ -10,5 +10,5 @@ This repo provides pure Python 3 implementations of various cryptosystems and pr
 ECB mode of operation is used in DES and AES, parametric mode of operations including CBC, CFB will be introduced later.
   </li>
   <li>
-Python's <i>random</i> library was used for PRNG, it uses linear congruential generators which are known to be cryptographically insecure
+Python's <i>random</i> library was used for PRNG, it uses linear congruential generators which are known to be cryptographically insecure. The <i>secrets</i> module was introduced in Python 3.6 which is claimed to be a module capable of generation cryptographically secure random numbers. Migration to this module will be done soon.
   </li>
