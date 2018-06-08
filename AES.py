@@ -1,6 +1,8 @@
 import Encoding
 import Utils
 import os
+from functools import reduce
+from .Mode import Mode
 # =================================================
 # Advanced Encryption Standard (AES) Implementation 
 # Implemented for 128 bit keys
@@ -152,6 +154,7 @@ class AES:
     def __init__(self, key):
         self.key = key
         self.roundKeys = [0]
+        self.mode = Mode(self)
 
     def _generateRoundKeys(self):
         key = int(self.key)
@@ -208,106 +211,127 @@ class AES:
                 roundKey |= keyMatrix[i*4 + j]
             self.roundKeys.append(roundKey)
 
-    # ELECTRONIC CODEBOOK MODE OF OPERATION IS USED
-    def encrypt(self, messageString):
-        if self.roundKeys[0] == 0:
-            self._generateRoundKeys()
-
+    def encrypt(self, messageString, mode):
+        # generate blocks of 128 bits
         blocks = Encoding.divideToBlocks(messageString, 128)
-        print("plaintext blocks:", hex(blocks[0]))
         encryptedBlocks = []
-        
+
+        if (mode == 'ECB'):
+            return Mode.ecb_encrypt(blocks)
+
+
         for block in blocks:
-            # seperate bytes of the block to obtain the state array
-            encryptedBlock = [] # state array
-            while block > 0:
-                byte = block & 0b11111111
-                block >>= 8
-                encryptedBlock.insert(0, byte)
-
-            # pad block with leading 0's if necessary
-            while len(encryptedBlock) < 16:
-                encryptedBlock.append(0)
-
-            # perform a key addition layer before iterative rounds
-            encryptedBlock = AESlayer.addRoundKey(encryptedBlock, self.roundKeys[0])
-            # first 9 rounds consist of 4 layers
-            for roundNum in range(9):
-                # 1 - byte substitution
-                encryptedBlock = AESlayer.substituteBytes(encryptedBlock)
-
-                # 2 - shift row
-                encryptedBlock = AESlayer.shiftRows(encryptedBlock)
-
-                # 3 - mix column
-                encryptedBlock = AESlayer.mixColumns(encryptedBlock)
-
-                # 4 - key addition
-                encryptedBlock = AESlayer.addRoundKey(encryptedBlock, self.roundKeys[roundNum + 1])
-
-            # last round doesn't have the mix column layer
-            encryptedBlock = AESlayer.substituteBytes(encryptedBlock)
-            encryptedBlock = AESlayer.shiftRows(encryptedBlock)
-            encryptedBlock = AESlayer.addRoundKey(encryptedBlock, self.roundKeys[10])
-
-            # put together the bytes in <encryptedBlock>
-            encryptedBlockInt = 0
-            for byte in encryptedBlock:
-                encryptedBlockInt <<= 8
-                encryptedBlockInt |= byte
-            encryptedBlocks.append(encryptedBlockInt)
+            encryptedBlocks.append(self.encryptBlock(block))
         return encryptedBlocks
 
-    def decrypt(self, ciphertextBlocks):
+    def encryptCBC(self, messageString, IV):
+        blocks = Encoding.divideToBlocks(messageString, 128)
+        encryptedBlocks = []
+        previousEncryptedBlock = IV
+        for block in blocks:
+            block = block ^ previousEncryptedBlock
+            currentEncryptedBlock = self.encryptBlock(block)
+            encryptedBlocks.append(currentEncryptedBlock)
+            previousEncryptedBlock = currentEncryptedBlock
+        return encryptedBlocks
+    
+    # ELECTRONIC CODEBOOK MODE OF OPERATION IS USED
+    def encryptBlock(self, block):
         if self.roundKeys[0] == 0:
-            raise ValueError("AES keys not set at time of decryption")
-
-        decryptedBlocks = []
-        for block in ciphertextBlocks:
-            decryptedBlock = [] # state array
-
-            while block > 0:
-                byte = block & 0b11111111
-                block >>= 8
-                decryptedBlock.insert(0, byte)
-
-            # 1 - Reverse the final round of encryption
-            decryptedBlock = AESlayer.addRoundKey(decryptedBlock, self.roundKeys[10])
-            decryptedBlock = AESlayer.shiftRows(decryptedBlock, True)
-            decryptedBlock = AESlayer.substituteBytes(decryptedBlock, True)
-
-            # 2 - Reverse 9 following rounds
-            for roundNum in range(9):
-                # 1 - key addition
-                decryptedBlock = AESlayer.addRoundKey(decryptedBlock, self.roundKeys[9 - roundNum])
-
-                # 2 - inverse mix column
-                decryptedBlock = AESlayer.mixColumns(decryptedBlock, True)
-
-                # 3 - inverse shift rows
-                decryptedBlock = AESlayer.shiftRows(decryptedBlock, True)
-
-                # 4 - inverse byte substitution
-                decryptedBlock = AESlayer.substituteBytes(decryptedBlock, True)
-
-            # 3 - Reverse the initial key addition layer of encryption
-            decryptedBlock = AESlayer.addRoundKey(decryptedBlock, self.roundKeys[0])
-
-            # put together the bytes in <decryptedBlock>
-            decryptedBlockInt = 0
-            for byte in decryptedBlock:
-                # if a byte consists of all 0's, this means that the block was padded with a 0-byte,
-                # the block has been finished!
-                if byte == 0:
-                    break
-                decryptedBlockInt <<= 8
-                decryptedBlockInt |= byte
-            decryptedBlocks.append(decryptedBlockInt)
+            self._generateRoundKeys()
         
+        # seperate bytes of the block to obtain the state array
+        encryptedBlock = [] # state array
+        while block > 0:
+            byte = block & 0b11111111
+            block >>= 8
+            encryptedBlock.insert(0, byte)
+
+        # pad block with leading 0's if necessary
+        while len(encryptedBlock) < 16:
+            encryptedBlock.append(0)
+
+        # perform a key addition layer before iterative rounds
+        encryptedBlock = AESlayer.addRoundKey(encryptedBlock, self.roundKeys[0])
+        # first 9 rounds consist of 4 layers
+        for roundNum in range(9):
+            # 1 - byte substitution
+            encryptedBlock = AESlayer.substituteBytes(encryptedBlock)
+
+            # 2 - shift row
+            encryptedBlock = AESlayer.shiftRows(encryptedBlock)
+
+            # 3 - mix column
+            encryptedBlock = AESlayer.mixColumns(encryptedBlock)
+
+            # 4 - key addition
+            encryptedBlock = AESlayer.addRoundKey(encryptedBlock, self.roundKeys[roundNum + 1])
+
+        # last round doesn't have the mix column layer
+        encryptedBlock = AESlayer.substituteBytes(encryptedBlock)
+        encryptedBlock = AESlayer.shiftRows(encryptedBlock)
+        encryptedBlock = AESlayer.addRoundKey(encryptedBlock, self.roundKeys[10])
+
+        # put together the bytes in <encryptedBlock>
+        encryptedBlockInt = 0
+        for byte in encryptedBlock:
+            encryptedBlockInt <<= 8
+            encryptedBlockInt |= byte
+        return encryptedBlockInt
+
+    def decryptECB(self, encryptedBlocks):
+        decryptedBlocks = []
+        for block in encryptedBlocks:
+            decryptedBlocks.append(self.decryptBlock(block))
+
         decryptedString = ""
         for block in decryptedBlocks:
             decryptedString += Encoding.decodeBits(block)
         return decryptedString
+
+    def decryptBlock(self, block):
+        if self.roundKeys[0] == 0:
+            raise ValueError("AES keys not set at time of decryption")
+
+        decryptedBlock = [] # state array
+
+        while block > 0:
+            byte = block & 0b11111111
+            block >>= 8
+            decryptedBlock.insert(0, byte)
+
+        # 1 - Reverse the final round of encryption
+        decryptedBlock = AESlayer.addRoundKey(decryptedBlock, self.roundKeys[10])
+        decryptedBlock = AESlayer.shiftRows(decryptedBlock, True)
+        decryptedBlock = AESlayer.substituteBytes(decryptedBlock, True)
+
+        # 2 - Reverse 9 following rounds
+        for roundNum in range(9):
+            # 1 - key addition
+            decryptedBlock = AESlayer.addRoundKey(decryptedBlock, self.roundKeys[9 - roundNum])
+
+            # 2 - inverse mix column
+            decryptedBlock = AESlayer.mixColumns(decryptedBlock, True)
+
+            # 3 - inverse shift rows
+            decryptedBlock = AESlayer.shiftRows(decryptedBlock, True)
+
+            # 4 - inverse byte substitution
+            decryptedBlock = AESlayer.substituteBytes(decryptedBlock, True)
+
+        # 3 - Reverse the initial key addition layer of encryption
+        decryptedBlock = AESlayer.addRoundKey(decryptedBlock, self.roundKeys[0])
+
+        # put together the bytes in <decryptedBlock>
+        decryptedBlockInt = 0
+        for byte in decryptedBlock:
+            # if a byte consists of all 0's, this means that the block was padded with a 0-byte,
+            # the block has been finished!
+            if byte == 0:
+                break
+            decryptedBlockInt <<= 8
+            decryptedBlockInt |= byte
+        return decryptedBlockInt
 
 
 if __name__ == "__main__":
@@ -320,10 +344,11 @@ if __name__ == "__main__":
     crypt = AES(AESkey)
 
     messageString = input("Enter text\n>> ")
-
-    encryptedBlocks = crypt.encrypt(messageString)
+    #initializationVector = 290070988920337519491873734171379636368
+    #print("init vector:", initializationVector)
+    encryptedBlocks = crypt.encryptECB(messageString)
     for i, block in enumerate(encryptedBlocks):
         print(f"encrypted block {i}: {hex(block)}")
 
-    decryptionResult = crypt.decrypt(encryptedBlocks)
+    decryptionResult = crypt.decryptECB(encryptedBlocks)
     print("Decryption result:\n", decryptionResult)
