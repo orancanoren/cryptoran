@@ -58,10 +58,10 @@ class Mode:
             raise Exception('Invalid blocks received')
 
         decryptedBlocks = []
-        for i in range(len(blocks))[1::-1]:
-            currentDecryptedBlock = self._crypto.decryptBlock(blocks[i]) ^ blocks[i - 1]
-            decryptedBlocks.insert(0, currentDecryptedBlock)
-        decryptedBlocks.insert(0, self._crypto.decryptBlock(blocks[0]))
+        for i in range(len(blocks))[:0:-1]:
+            p_i = self._crypto.decryptBlock(blocks[i]) ^ blocks[i - 1]
+            decryptedBlocks.insert(0, p_i)
+        decryptedBlocks.insert(0, self._crypto.decryptBlock(blocks[0]) ^ IV)
         return decryptedBlocks
 
     def encrypt(self, blocks, IV = None):
