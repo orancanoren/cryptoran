@@ -2,7 +2,9 @@ import Encoding
 import Utils
 import os
 from functools import reduce
-from .Mode import Mode
+from Mode import Mode
+from BlockCipher import BlockCipher
+
 # =================================================
 # Advanced Encryption Standard (AES) Implementation 
 # Implemented for 128 bit keys
@@ -150,11 +152,18 @@ class AESlayer:
         return dotMultiplicationResult
     # MARK: class AESlayer ends
 
-class AES:
-    def __init__(self, key):
+class AES(BlockCipher):
+    def __init__(self, key, mode, IV = None):
         self.key = key
         self.roundKeys = [0]
-        self.mode = Mode(self)
+        self.mode = Mode(self, mode)
+        self.IV = IV
+
+    def blocksToASCII(self, blocks):
+        asciiString = ''
+        for block in blocks:
+            asciiString += Encoding.decodeBits(block)
+        return asciiString
 
     def _generateRoundKeys(self):
         key = int(self.key)
@@ -211,31 +220,6 @@ class AES:
                 roundKey |= keyMatrix[i*4 + j]
             self.roundKeys.append(roundKey)
 
-    def encrypt(self, messageString, mode):
-        # generate blocks of 128 bits
-        blocks = Encoding.divideToBlocks(messageString, 128)
-        encryptedBlocks = []
-
-        if (mode == 'ECB'):
-            return Mode.ecb_encrypt(blocks)
-
-
-        for block in blocks:
-            encryptedBlocks.append(self.encryptBlock(block))
-        return encryptedBlocks
-
-    def encryptCBC(self, messageString, IV):
-        blocks = Encoding.divideToBlocks(messageString, 128)
-        encryptedBlocks = []
-        previousEncryptedBlock = IV
-        for block in blocks:
-            block = block ^ previousEncryptedBlock
-            currentEncryptedBlock = self.encryptBlock(block)
-            encryptedBlocks.append(currentEncryptedBlock)
-            previousEncryptedBlock = currentEncryptedBlock
-        return encryptedBlocks
-    
-    # ELECTRONIC CODEBOOK MODE OF OPERATION IS USED
     def encryptBlock(self, block):
         if self.roundKeys[0] == 0:
             self._generateRoundKeys()
@@ -278,16 +262,6 @@ class AES:
             encryptedBlockInt <<= 8
             encryptedBlockInt |= byte
         return encryptedBlockInt
-
-    def decryptECB(self, encryptedBlocks):
-        decryptedBlocks = []
-        for block in encryptedBlocks:
-            decryptedBlocks.append(self.decryptBlock(block))
-
-        decryptedString = ""
-        for block in decryptedBlocks:
-            decryptedString += Encoding.decodeBits(block)
-        return decryptedString
 
     def decryptBlock(self, block):
         if self.roundKeys[0] == 0:
@@ -333,22 +307,41 @@ class AES:
             decryptedBlockInt |= byte
         return decryptedBlockInt
 
+    def encrypt(self, messageString):
+        blocks = Encoding.divideToBlocks(messageString, 128) # blocks of 128 bits
+        encryptedBlocks = self.mode.encrypt(blocks, self.IV)
+        return encryptedBlocks
+
+    def decrypt(self, blocks):
+        decryptedBlocks = self.mode.decrypt(blocks, self.IV)
+        return self.blocksToASCII(decryptedBlocks)
+
 
 if __name__ == "__main__":
     print("AES-128 Encryption tool")
-    AESkey = input("Enter the AES key (leave blank for random key generation):\n>> ")
+
+    # Get the mode of operation
+    mode = input("Enter the mode of operation (CBC, ECB):\n>> ")
+    iv = None
+    if mode == 'CBC':
+        iv = input('Enter the initial vector for CBC mode (leave blank for random)\n>> ')
+        if iv == '':
+            iv = Utils.randomNumber(128)
+            print('IV:', hex(iv))
+
+   # Get the key 
+    AESkey = input("Enter the 128-bit AES key (leave blank for random key generation):\n>> ")
     if AESkey == "":
         AESkey = Utils.randomNumber(128)
         print("AES key:", hex(AESkey))
 
-    crypt = AES(AESkey)
+    # Instantiate the AES class
+    crypt = AES(AESkey, mode, iv)
 
     messageString = input("Enter text\n>> ")
-    #initializationVector = 290070988920337519491873734171379636368
-    #print("init vector:", initializationVector)
-    encryptedBlocks = crypt.encryptECB(messageString)
+    encryptedBlocks = crypt.encrypt(messageString)
     for i, block in enumerate(encryptedBlocks):
         print(f"encrypted block {i}: {hex(block)}")
 
-    decryptionResult = crypt.decryptECB(encryptedBlocks)
-    print("Decryption result:\n", decryptionResult)
+    decryptionResult = crypt.decrypt(encryptedBlocks)
+    print("Decryption result:\n" + decryptionResult)
