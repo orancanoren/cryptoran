@@ -1,9 +1,12 @@
-import Encoding
 import datetime
-import os
-import Utils
+import os, sys
 from Mode import Mode
 from BlockCipher import BlockCipher
+
+# import shared modules
+sys.path.append(os.path.dirname(os.getcwd()))
+import Encoding
+import Utils
 
 # ==============================================
 # Data Encryption Standard (DES) Implementation 
@@ -255,7 +258,6 @@ class DES(BlockCipher):
 
     def encrypt(self, messageString):
         blocks = Encoding.divideToBlocks(messageString, 64) # DES uses 64-bit plaintext blocks
-        print('Plaintext blocks:\n', blocks)
         encryptedBlocks = self.mode.encrypt(blocks)
         return encryptedBlocks
 

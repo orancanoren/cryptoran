@@ -1,9 +1,12 @@
-import Encoding
-import Utils
-import os
+import os, sys
 from functools import reduce
 from Mode import Mode
 from BlockCipher import BlockCipher
+
+# import shared modules
+sys.path.append(os.path.dirname(os.getcwd()))
+import Encoding
+import Utils
 
 # =================================================
 # Advanced Encryption Standard (AES) Implementation 
@@ -11,7 +14,7 @@ from BlockCipher import BlockCipher
 # Author: Oran Can Oren
 # Email: orancanoren@gmail.com
 # =================================================
-
+ 
 # MARK: class AESlayer begins
 class AESlayer:
     @staticmethod
