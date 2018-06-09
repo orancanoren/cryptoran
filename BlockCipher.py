@@ -13,7 +13,3 @@ class BlockCipher(ABC):
     @abstractmethod
     def decryptBlock(self, block):
         pass
-
-    @abstractmethod
-    def blocksToASCII(self, blocks):
-        pass

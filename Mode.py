@@ -10,9 +10,10 @@ class Mode:
     Available modes: ECB, CBC
     '''
 
-    def __init__(self, cryptosystem, mode):
+    def __init__(self, cryptosystem, mode, IV):
         self._crypto = cryptosystem
         self._mode = mode
+        self._iv = IV
         
     @staticmethod
     def _blocksAreValid(blocks):
@@ -40,12 +41,12 @@ class Mode:
             decryptedBlocks.append(decryptedBlock)
         return decryptedBlocks
 
-    def _cbcEncrypt(self, blocks, IV):
+    def _cbcEncrypt(self, blocks):
         if not Mode._blocksAreValid(blocks):
             raise Exception('Invalid blocks received')
 
         encryptedBlocks = []
-        prevEncBlock = IV
+        prevEncBlock = self._iv
         for block in blocks:
             block = block ^ prevEncBlock
             currentEncryptedBlock = self._crypto.encryptBlock(block)
@@ -53,7 +54,7 @@ class Mode:
             prevEncBlock = currentEncryptedBlock
         return encryptedBlocks
 
-    def _cbcDecrypt(self, blocks, IV):
+    def _cbcDecrypt(self, blocks):
         if not Mode._blocksAreValid(blocks):
             raise Exception('Invalid blocks received')
 
@@ -61,17 +62,17 @@ class Mode:
         for i in range(len(blocks))[:0:-1]:
             p_i = self._crypto.decryptBlock(blocks[i]) ^ blocks[i - 1]
             decryptedBlocks.insert(0, p_i)
-        decryptedBlocks.insert(0, self._crypto.decryptBlock(blocks[0]) ^ IV)
+        decryptedBlocks.insert(0, self._crypto.decryptBlock(blocks[0]) ^ self._iv)
         return decryptedBlocks
 
-    def encrypt(self, blocks, IV = None):
+    def encrypt(self, blocks):
         if self._mode == 'ECB':
             return self._ecbEncrypt(blocks)
         elif self._mode == 'CBC':
-            return self._cbcEncrypt(blocks, IV)
+            return self._cbcEncrypt(blocks)
 
-    def decrypt(self, blocks, IV = None):
+    def decrypt(self, blocks):
         if self._mode == 'ECB':
             return self._ecbDecrypt(blocks)
         elif self._mode == 'CBC':
-            return self._cbcDecrypt(blocks, IV)
+            return self._cbcDecrypt(blocks)

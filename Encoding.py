@@ -38,6 +38,12 @@ def divideToBlocks(messageString, blockBitLength):
     
     return blocks
 
+def blocksToASCII(blocks):
+    asciiString = ''
+    for block in blocks:
+        asciiString += decodeBits(block)
+    return asciiString
+
 # MARK: OAEP encoding
 class OAEP:
     def __init__(self, blockLength = None, k0 = None, k1 = None):

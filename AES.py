@@ -156,14 +156,7 @@ class AES(BlockCipher):
     def __init__(self, key, mode, IV = None):
         self.key = key
         self.roundKeys = [0]
-        self.mode = Mode(self, mode)
-        self.IV = IV
-
-    def blocksToASCII(self, blocks):
-        asciiString = ''
-        for block in blocks:
-            asciiString += Encoding.decodeBits(block)
-        return asciiString
+        self.mode = Mode(self, mode, IV)
 
     def _generateRoundKeys(self):
         key = int(self.key)
@@ -309,12 +302,12 @@ class AES(BlockCipher):
 
     def encrypt(self, messageString):
         blocks = Encoding.divideToBlocks(messageString, 128) # blocks of 128 bits
-        encryptedBlocks = self.mode.encrypt(blocks, self.IV)
+        encryptedBlocks = self.mode.encrypt(blocks)
         return encryptedBlocks
 
     def decrypt(self, blocks):
-        decryptedBlocks = self.mode.decrypt(blocks, self.IV)
-        return self.blocksToASCII(decryptedBlocks)
+        decryptedBlocks = self.mode.decrypt(blocks)
+        return Encoding.blocksToASCII(decryptedBlocks)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,9 @@
 import Encoding
 import datetime
 import os
+import Utils
+from Mode import Mode
+from BlockCipher import BlockCipher
 
 # ==============================================
 # Data Encryption Standard (DES) Implementation 
@@ -165,12 +168,15 @@ class DESround:
         return permutedBlock
     # MARK: class DESround ends
 
-class DES:
-    def __init__(self, key):
+class DES(BlockCipher):
+    def __init__(self, key, mode, IV):
         self.key = key
-        self.roundKeys = [0]*16
+        self.mode = Mode(self, mode, IV)
+        self.IV = IV
+        self.roundKeys = None
 
     def _generateRoundKeys(self):
+        self.roundKeys = [0]*16
         shift = [1,1,2,2,2,2,2,2,1,2,2,2,2,2,2,1]
 
         # initial permutation on key
@@ -217,67 +223,72 @@ class DES:
 
             self.roundKeys[i] = DESround.permute((leftHalfKey << 28) | rightHalfKey, shiftRoundPerm, 56, 48)
 
-    # ELECTRONIC CODEBOOK MODE OF OPERATION IS USED
-    def _operate(self, blocks, decrypt = False):
-        if self.roundKeys[0] == 0:
-            self._generateRoundKeys()
-
-        processedBlocks = []
-
-        #print("blocks:", blocks)
-        
-        for i, block in enumerate(blocks):
-            # 1 - obtain the initial permutation
-            block = DESround.initialPermutation(block)
-            # 2 - apply 16 rounds of DES
-            for i in range(16):
-                leftHalf = block >> 32
-                rightHalf = block & (2**32 - 1)
-                currentKey = self.roundKeys[i] if not decrypt else self.roundKeys[15 - i]
-                block = DESround.applyRound(leftHalf, rightHalf, currentKey)
-
-            # apply the final permutation to the block having its left and right halves switched
+    def _processBlock(self, block, roundKeys):
+        # 1 - obtain the initial permutation
+        block = DESround.initialPermutation(block)
+        # 2 - apply 16 rounds of DES
+        for i in range(16):
             leftHalf = block >> 32
             rightHalf = block & (2**32 - 1)
+            block = DESround.applyRound(leftHalf, rightHalf, roundKeys[i])
 
-            # 3 - apply final permutation
-            cipheredBlock = DESround.finalPermutation((rightHalf << 32) | leftHalf)
-            
-            processedBlocks.append(cipheredBlock)
-        
-        return processedBlocks
+        # apply the final permutation to the block having its left and right halves switched
+        leftHalf = block >> 32
+        rightHalf = block & (2**32 - 1)
+
+        # 3 - apply final permutation
+        processedBlock = DESround.finalPermutation((rightHalf << 32) | leftHalf)
+
+        return processedBlock
+
+    def encryptBlock(self, block):
+        # use the standard round keys (not reversed)
+        if not self.roundKeys:
+            self._generateRoundKeys()
+        return self._processBlock(block, self.roundKeys)
+
+    def decryptBlock(self, block):
+        # use round keys in reversed order
+        if not self.roundKeys:
+            self._generateRoundKeys()
+        return self._processBlock(block, self.roundKeys[::-1])
 
     def encrypt(self, messageString):
         blocks = Encoding.divideToBlocks(messageString, 64) # DES uses 64-bit plaintext blocks
-        return self._operate(blocks, False)
+        print('Plaintext blocks:\n', blocks)
+        encryptedBlocks = self.mode.encrypt(blocks)
+        return encryptedBlocks
 
-    def decrypt(self, ciphertextBlocks):
-        decrypted = self._operate(ciphertextBlocks, True)
-        decoded = ''.join([Encoding.decodeBits(decryptedBlock) for decryptedBlock in decrypted])
-        return decoded
+    def decrypt(self, blocks):
+        decrypted = self.mode.decrypt(blocks)
+        decryptedString = Encoding.blocksToASCII(decrypted)
+        return decryptedString
 
-key = 0b0001001100110100010101110111100110011011101111001101111111110001
-print(f"DES key: {hex(key)}\n")
+if __name__ == "__main__":
+    print("DES Encryption tool")
 
-begin = datetime.datetime.now()
-crypt = DES(key)
+    # Get the mode of operation
+    mode = input("Enter the mode of operation (CBC, ECB):\n>> ")
+    iv = None
+    if mode == 'CBC':
+        iv = input('Enter the initial vector for CBC mode (leave blank for random)\n>> ')
+        if iv == '':
+            iv = Utils.randomNumber(56)
+            print('IV:', hex(iv))
 
-plaintext = "Elton John - Your Song\n" + '''
-It's a little bit funny this feeling inside
-I'm not one of those who can easily hide
-I don't have much money but boy if I did...
-''' 
+   # Get the key 
+    DESkey = input("Enter the 64-bit DES key (leave blank for random key generation):\n>> ")
+    if DESkey == "":
+        DESkey = Utils.randomNumber(64)
+        print("DES key:", hex(DESkey))
 
-encryptedBlocks = crypt.encrypt(plaintext)
-end = datetime.datetime.now()
+    # Instantiate the AES class
+    crypt = DES(DESkey, mode, iv)
 
-print(f"Encryption done in {(end - begin).microseconds // 1000} ms\n")
-for i, block in enumerate(encryptedBlocks):
-    print(f"encrypted block {i}: {hex(block)}")
-print()
+    messageString = input("Enter text\n>> ")
+    encryptedBlocks = crypt.encrypt(messageString)
+    for i, block in enumerate(encryptedBlocks):
+        print(f"encrypted block {i}: {hex(block)}")
 
-begin = datetime.datetime.now()
-decryptionResult = crypt.decrypt(encryptedBlocks)
-end = datetime.datetime.now()
-
-print(f"decryption done in {(end - begin).microseconds // 1000} ms:\n{decryptionResult}")
+    decryptionResult = crypt.decrypt(encryptedBlocks)
+    print("Decryption result:\n" + decryptionResult)
