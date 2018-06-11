@@ -3,11 +3,7 @@ import os, sys
 import os, sys
 from .Mode import Mode
 from .BlockCipher import BlockCipher
-
-# import shared modules
-dirname = os.path.dirname
-cryptosuitePath = dirname(os.path.join(dirname(dirname(__file__)), '../'))
-sys.path.append(cryptosuitePath)
+from .. import Encoding, Utils
 
 # ==============================================
 # Data Encryption Standard (DES) Implementation 
@@ -173,8 +169,11 @@ class DESround:
     # MARK: class DESround ends
 
 class DES(BlockCipher):
-    def __init__(self, key, mode, IV):
+    def __init__(self, mode, key, IV):
+        super().__init__(64)
         self.key = key
+        if self.key == None:
+            self.key = self.generateRandomKey()
         self.mode = Mode(self, mode, IV)
         self.IV = IV
         self.roundKeys = None
@@ -245,24 +244,24 @@ class DES(BlockCipher):
 
         return processedBlock
 
-    def encryptBlock(self, block):
+    def encryptBlock(self, block: int) -> int:
         # use the standard round keys (not reversed)
         if not self.roundKeys:
             self._generateRoundKeys()
         return self._processBlock(block, self.roundKeys)
 
-    def decryptBlock(self, block):
+    def decryptBlock(self, block: int) -> int:
         # use round keys in reversed order
         if not self.roundKeys:
             self._generateRoundKeys()
         return self._processBlock(block, self.roundKeys[::-1])
 
-    def encrypt(self, messageString):
+    def encrypt(self, messageString: str) -> list:
         blocks = Encoding.divideToBlocks(messageString, 64) # DES uses 64-bit plaintext blocks
         encryptedBlocks = self.mode.encrypt(blocks)
         return encryptedBlocks
 
-    def decrypt(self, blocks):
+    def decrypt(self, blocks: list) -> str:
         decrypted = self.mode.decrypt(blocks)
         decryptedString = Encoding.blocksToASCII(decrypted)
         return decryptedString

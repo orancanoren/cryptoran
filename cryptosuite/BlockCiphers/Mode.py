@@ -5,15 +5,27 @@
 # ===================================================
 import types
 
+availableModes = ['ecb', 'cbc']
+
 class Mode:
     '''Implements encryption and decryption functions for specified mode of operations.
     Available modes: ECB, CBC
     '''
 
     def __init__(self, cryptosystem, mode, IV):
+        if mode not in availableModes:
+            errmsg = ' is not an available mode!'
+            if type(mode) == str:
+                errmsg = mode + errmsg
+            else:
+                errmsg = 'provided mode (of type ' + str(type(mode)) + ')' + errmsg
+            raise Exception(errmsg)
         self._crypto = cryptosystem
         self._mode = mode
         self._iv = IV
+        if not self._iv:
+            self._iv = cryptosystem.generateRandomKey()
+            print('Randomly generated IV:', hex(self._iv))
         
     @staticmethod
     def _blocksAreValid(blocks):
@@ -66,13 +78,13 @@ class Mode:
         return decryptedBlocks
 
     def encrypt(self, blocks):
-        if self._mode == 'ECB':
+        if self._mode == 'ecb':
             return self._ecbEncrypt(blocks)
-        elif self._mode == 'CBC':
+        elif self._mode == 'cbc':
             return self._cbcEncrypt(blocks)
 
     def decrypt(self, blocks):
-        if self._mode == 'ECB':
+        if self._mode == 'ecb':
             return self._ecbDecrypt(blocks)
-        elif self._mode == 'CBC':
+        elif self._mode == 'cbc':
             return self._cbcDecrypt(blocks)

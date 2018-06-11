@@ -155,10 +155,14 @@ class AESlayer:
     # MARK: class AESlayer ends
 
 class AES(BlockCipher):
-    def __init__(self, key, mode, IV = None):
+    def __init__(self, mode, key = None, IV = None):
+        super().__init__(128)
         self.key = key
+        if self.key == None:
+            self.key = self.generateRandomKey()
         self.roundKeys = [0]
         self.mode = Mode(self, mode, IV)
+        
 
     def _generateRoundKeys(self):
         key = int(self.key)
@@ -310,7 +314,6 @@ class AES(BlockCipher):
     def decrypt(self, blocks):
         decryptedBlocks = self.mode.decrypt(blocks)
         return Encoding.blocksToASCII(decryptedBlocks)
-
 
 if __name__ == "__main__":
     print("AES-128 Encryption tool")
