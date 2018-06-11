@@ -1,5 +1,8 @@
 import random
-import Utils
+import os, sys
+
+# import shared modules
+from .. import Encoding, Utils
 
 class DiffieHellman:
     def __init__(self, prime = None, generator = None):
@@ -39,11 +42,3 @@ class DiffieHellman:
         if self.sharedKey == correspondentExp:
             return True
         return False
-
-dhellman = DiffieHellman()
-dhellman.generateSecret()
-dhellman.generateSharedKey()
-if dhellman.verifySharedKey():
-    print(f"Key sharing successful, shared key:\n{hex(dhellman.sharedKey)}")
-else:
-    print("Error: Correspondents do NOT have the same key!")

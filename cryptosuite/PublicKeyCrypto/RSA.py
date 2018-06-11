@@ -1,6 +1,11 @@
-import Utils
-import Encoding
 import random
+import os, sys
+
+# import shared modules
+dirname = os.path.dirname
+cryptosuitePath = dirname(os.path.join(dirname(dirname(__file__)), '../'))
+sys.path.append(cryptosuitePath)
+from .. import Encoding, Utils
 
 # ==============================================
 # RSA PKC implementation
@@ -8,7 +13,7 @@ import random
 # Email: orancanoren@gmail.com
 # ==============================================
 
-class RSAOAEP:
+class RSA:
     def __init__(self):
         self.encryptionExp = None
         self.decryptionExp = None
@@ -55,12 +60,3 @@ class RSAOAEP:
         OAEPencoder = Encoding.OAEP(self.OAEPblockSize, self.OAEPk0, self.OAEPk1)
         OAEPdecoded = OAEPencoder.decode(decrypted)
         return Encoding.decodeBits(OAEPdecoded)
-
-crypt = RSAOAEP()
-crypt.generateKeys()
-
-ciphertext = crypt.encrypt(input("Enter text\n>> "))
-print("encryption result:\n", hex(ciphertext))
-
-decrypted = crypt.decrypt(ciphertext)
-print("decryption result:\n", decrypted)

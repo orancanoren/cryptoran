@@ -1,12 +1,13 @@
 import datetime
 import os, sys
-from Mode import Mode
-from BlockCipher import BlockCipher
+import os, sys
+from .Mode import Mode
+from .BlockCipher import BlockCipher
 
 # import shared modules
-sys.path.append(os.path.dirname(os.getcwd()))
-import Encoding
-import Utils
+dirname = os.path.dirname
+cryptosuitePath = dirname(os.path.join(dirname(dirname(__file__)), '../'))
+sys.path.append(cryptosuitePath)
 
 # ==============================================
 # Data Encryption Standard (DES) Implementation 

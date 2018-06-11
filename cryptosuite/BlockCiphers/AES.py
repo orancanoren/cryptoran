@@ -1,12 +1,11 @@
 import os, sys
 from functools import reduce
-from Mode import Mode
-from BlockCipher import BlockCipher
+from .Mode import Mode
+from .BlockCipher import BlockCipher
 
 # import shared modules
-sys.path.append(os.path.dirname(os.getcwd()))
-import Encoding
-import Utils
+from .. import Encoding
+from .. import Utils
 
 # =================================================
 # Advanced Encryption Standard (AES) Implementation 
@@ -134,7 +133,7 @@ class AESlayer:
         def galoisMult(a, b):
             p = 0
             hiBitSet = 0
-            for i in range(8):
+            for _ in range(8):
                 if b & 1 == 1:
                     p ^= a
                 hiBitSet = a & 0x80
@@ -326,10 +325,12 @@ if __name__ == "__main__":
             print('IV:', hex(iv))
 
    # Get the key 
-    AESkey = input("Enter the 128-bit AES key (leave blank for random key generation):\n>> ")
+    AESkey = input("Enter the 128-bit AES key in hex (leave blank for random key generation):\n>> ")
     if AESkey == "":
         AESkey = Utils.randomNumber(128)
         print("AES key:", hex(AESkey))
+    else:
+        AESkey = int(AESkey, 16)
 
     # Instantiate the AES class
     crypt = AES(AESkey, mode, iv)

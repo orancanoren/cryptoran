@@ -1,5 +1,6 @@
 import random
 import datetime
+from functools import reduce
 
 # ==============================================
 # Utility functions for cryptographic algorithms
@@ -36,7 +37,7 @@ def miller_rabin(n, confidence = 40):
         if x == 1 or x == n - 1:
             continue
         composite = True
-        for j in range(s - 1):
+        for _ in range(s - 1):
             x = pow(x, 2, n)
             if x == 1:
                 return False
