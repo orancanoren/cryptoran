@@ -4,8 +4,7 @@ from .Mode import Mode
 from .BlockCipher import BlockCipher
 
 # import shared modules
-from .. import Encoding
-from .. import Utils
+from .. import Encoding, Utils
 
 # =================================================
 # Advanced Encryption Standard (AES) Implementation 

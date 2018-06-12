@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from .. import Utils
+from .. import Encoding, Utils
 
 class BlockCipher(ABC):
     def __init__(self, keylength):

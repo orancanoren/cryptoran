@@ -1,7 +1,4 @@
 import random
-import os, sys
-
-# import shared modules
 from .. import Encoding, Utils
 
 class DiffieHellman:

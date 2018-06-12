@@ -1,10 +1,6 @@
 import random
-import os, sys
 
 # import shared modules
-dirname = os.path.dirname
-cryptosuitePath = dirname(os.path.join(dirname(dirname(__file__)), '../'))
-sys.path.append(cryptosuitePath)
 from .. import Encoding, Utils
 
 # ==============================================

@@ -1,5 +1,5 @@
 import argparse
-from cryptosuite import BlockCiphers, PublicKeyCrypto, SecretKeySharing
+from packages import BlockCiphers, PublicKeyCrypto, SecretKeySharing
 
 if __name__ == '__main__':
     def banner(description):
