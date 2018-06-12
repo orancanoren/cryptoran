@@ -1,6 +1,6 @@
 # cryptoran
 <h2>A crypto library implemented in pure Python 3</h2>
-Cryptoran provides pure Python 3 implementations of various cryptosystems and protocols. No external dependencies!
+Cryptoran provides pure Python 3 implementations of various cryptosystems and protocols along with mathematical tools used to build them. No external dependencies!
 
 ## Usage
 
@@ -12,23 +12,23 @@ $ pip3 install cryptoran
 Import the package and retrieve the module you want.
 
 ```python3
-from cryptoran.cryptosuite.BlockCiphers import AES
+from cryptoran import BlockCiphers
 plaintext = "this is an ASCII encoded string"
 key = 92837429324
 iv = 20348120348
-cipher = AES('cbc', key, iv)
+cipher = BlockCiphers.AES('cbc', key, iv)
 ciphertextBlocks = cipher.encrypt(plaintext)
 # [0x2619c77c7a108d0f001df29682a04a19, 0xa331d003481363af4c860883ecbcb34d]
 
 print(cipher.decrypt(ciphertextBlocks)) # this is an ASCII encoded string
 ```
 
-__IMPORTANT__: The package structure is not done yet, and there is something wrong with pip setup. These major issues will be fixed soon! A concise documentation will be provided in subsequent updates.
+A concise documentation will be provided in subsequent updates. Proper unit tests haven't been developed yet, version 0.1 will cover them.
 
 ## Features
 
 * __Block ciphers__  
-Block ciphers support CBC and ECB modes of operation.
+Block ciphers support CBC and ECB modes of operations.
   * AES
   * DES
 * __Public key crypto__  
