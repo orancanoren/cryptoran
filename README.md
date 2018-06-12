@@ -1,10 +1,10 @@
-# CryptographicAlgorithmsSuite
-<h2>RSA-OAEP, ElGamal, DES, AES (Rijndael), Diffie Hellman</h2>
+# cryptoran
+<h2>A crypto library implemented in pure Python 3</h2>
 <hr />
 This repo provides pure Python 3 implementations of various cryptosystems and protocols, authored by me without external dependencies.
 <hr />
 <h3>Notes</h3>
-<b>These implementations are intended for educational purposes only, they are NOT cryptographically secure and they are probably vulnerable against side-channel attacks.</b><br/><br/>
+<b>These implementations are intended for educational purposes only, they are NOT cryptographically secure and they are probably vulnerable against side-channel attacks, some MITM and more.</b><br/><br/>
 ECB and CBC modes of operation are available for block ciphers.
 <hr />
 <h3>Known Vulnerabilities</h3>
