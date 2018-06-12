@@ -4,6 +4,13 @@ Cryptoran provides pure Python 3 implementations of various cryptosystems and pr
 
 ## Usage
 
+Install easily with pip:
+```bash
+$ pip3 install cryptoran
+```
+
+Import the package and retrieve the module you want.
+
 ```python3
 from cryptoran.cryptosuite.BlockCiphers import AES
 plaintext = "this is an ASCII encoded string"
@@ -15,6 +22,8 @@ ciphertextBlocks = cipher.encrypt(plaintext)
 
 print(cipher.decrypt(ciphertextBlocks)) # this is an ASCII encoded string
 ```
+
+__IMPORTANT__: The package structure is not done yet, and there is something wrong with pip setup. These major issues will be fixed soon! A concise documentation will be provided in subsequent updates.
 
 ## Features
 
