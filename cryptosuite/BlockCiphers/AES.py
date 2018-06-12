@@ -160,10 +160,10 @@ class AES(BlockCipher):
         self.key = key
         if self.key == None:
             self.key = self.generateRandomKey()
+            print('Randomly generated AES key:', hex(self.key))
         self.roundKeys = [0]
         self.mode = Mode(self, mode, IV)
         
-
     def _generateRoundKeys(self):
         key = int(self.key)
 
@@ -264,7 +264,7 @@ class AES(BlockCipher):
 
     def decryptBlock(self, block):
         if self.roundKeys[0] == 0:
-            raise ValueError("AES keys not set at time of decryption")
+            self._generateRoundKeys()
 
         decryptedBlock = [] # state array
 

@@ -32,10 +32,10 @@ parser.add_argument('--key-help', help='help doc on key option', action='store_t
 parser.add_argument('cryptosystem', help='the cryptosystem to use', choices=allcrypto)
 parser.add_argument('-m', '--mode', help='mode of operation for block ciphers', choices=modes)
 parser.add_argument('-iv', '--initvector', help='initialization vector for block ciphers')
-parser.add_argument('-k', '--key', help='key to be used in the cryptosystem (--key-help for more help)', type=int)
-parser.add_argument('-iascii', '--inputascii', help='input in ASCII format')
+parser.add_argument('-k', '--key', help='key to be used in the cryptosystem (--key-help for more help)')
+parser.add_argument('-i', '--input', help='input in ASCII format')
 parser.add_argument('-e', '--encrypt', help='encrypt input', action='store_true')
-parser.add_argument('-d', '--decrypt', help='decryption input')
+parser.add_argument('-d', '--decrypt', help='decryption input', action='store_true')
 
 args = parser.parse_args()
 
@@ -48,16 +48,23 @@ def printBlocks(blocks):
 if args.cryptosystem in blockciphers:
     if not args.mode:
         parser.error('--mop is required for block ciphers')
-    if not args.encrypt or args.decrypt:
+    if not args.encrypt and not args.decrypt:
         parser.error('block ciphers should be invoked in encryption or decryption mode')
-    if not args.inputascii:
+    if not args.input:
         parser.error('an input must be provided to the cryptosystem')
+    if args.mode != 'ecb' and not args.initvector and args.decrypt:
+        parser.error('Initialization vector must be provided for mode ' + args.mode + ' mode for decryption')
 
 banner(args.cryptosystem)
 
 
 if args.cryptosystem in blockciphers:
-    cipher = modules[args.cryptosystem](args.mode, args.key, args.initvector)
+    key = int(args.key, 16) if args.key else None
+    iv = int(args.initvector, 16) if args.initvector else None
+    cipher = modules[args.cryptosystem](args.mode, key, iv)
     if args.encrypt:
-        ciphetextBlocks = cipher.encrypt(args.inputascii)
+        ciphetextBlocks = cipher.encrypt(args.input)
         printBlocks(ciphetextBlocks)
+    else:
+        block = [int(args.input, 16)]
+        print(cipher.decrypt(block))
