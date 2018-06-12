@@ -1,6 +1,6 @@
 # cryptoran
 <h2>A crypto library implemented in pure Python 3</h2>
-Cryptoran provides pure Python 3 implementations of various cryptosystems and protocols. No external dependencies!
+Cryptoran provides pure Python 3 implementations of various cryptosystems and protocols along with mathematical tools used to build them. No external dependencies!
 
 ## Usage
 
