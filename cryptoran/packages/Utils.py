@@ -16,7 +16,7 @@ random.seed((datetime.datetime.now()
 # MARK: primality testing & other related functions
 
 def miller_rabin(n, confidence = 40):
-    if n == 3:
+    if n == 3 or n == 2:
         return True
     elif n < 3 or n % 2 == 0:
         return False
@@ -53,17 +53,18 @@ def randomNumber(bitLength):
     return random.randint((1 << bitLength - 1) + 1, (1 << bitLength))
 
 def randomLargePrime(bitLength):
-    a = 2
+    a = 1
     while not miller_rabin(a):
         a = randomNumber(bitLength)
     return a
 
 def EEA(a, b):
-    if a == 0:
-        return (b, 0, 1)
-    else:
-        g, x, y = EEA(b % a, a)
-        return (g, y - (b // a) * x, x)
+    x0, x1, y0, y1 = 1, 0, 0, 1
+    while a != 0:
+        q, b, a = b // a, a, b % a
+        x0, x1 = x1, x0 - q * x1
+        y0, y1 = y1, y0 - q * y1
+    return  b, x0, y0
 
 def multiplicative_inverse(a, n):
     gcd, x, _ = EEA(a, n)
@@ -86,16 +87,19 @@ def crt(moduli, remainders):
 # MARK: number theoretic tools
 
 def getGroupWithGenerator(bitLength):
-    # returns a prime p along with a
-    # generator g of Z_p
-    p = 2
+    # 1 - pick a random safe prime of desired bit length
+    q = randomLargePrime(bitLength)
+    
+    p = (2 * q) + 1
     while not miller_rabin(p):
         q = randomLargePrime(bitLength)
         p = (2 * q) + 1
     
-    # 2 - find a generator
-    g = random.randint(2, q)
-    while not (pow(g, q, p) and g ** 2 != 1):
-        g = random.randint(2, q)
+    # 2 - find a generator of Z^*_p
+    ## Order of subgroups of Z^*_p are either 2 or q
+    ## by the theorem of lagrange
+    g = random.randint(2, p)
+    while not (pow(g, q, p) != 1 or g ** 2 == 1):
+        g = random.randint(2, p)
     
     return (p, g)
