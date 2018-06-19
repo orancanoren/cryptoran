@@ -1,5 +1,5 @@
 import argparse
-from packages import BlockCiphers, PublicKeyCrypto, SecretKeySharing
+from packages import blockcipher, pkc, keyexchange
 
 if __name__ == '__main__':
     def banner(description):
@@ -16,16 +16,16 @@ if __name__ == '__main__':
 
     blockciphers = ['aes', 'des']
     modes = ['cbc', 'ecb']
-    pkc = ['rsa', 'elgamal']
-    secretkey = ['dh']
-    allcrypto = blockciphers + pkc + secretkey
+    pubkeycrypto = ['rsa', 'elgamal']
+    exchange = ['dh']
+    allcrypto = blockciphers + pubkeycrypto + exchange
 
     modules = {
-        'aes': BlockCiphers.AES,
-        'des': BlockCiphers.DES,
-        'rsa': PublicKeyCrypto.RSA,
-        'elgamal': PublicKeyCrypto.ElGamal,
-        'dh': SecretKeySharing.DiffieHellman
+        'aes': blockcipher.AES,
+        'des': blockcipher.DES,
+        'rsa': pkc.RSA,
+        'elgamal': pkc.ElGamal,
+        'dh': keyexchange.DiffieHellman
     }
 
     parser = argparse.ArgumentParser()
@@ -40,10 +40,20 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--prime', help='group order for key exchange and pkc protocols', type=int)
     parser.add_argument('-pl', '--primelength', help='bitlength for prime number', type=int)
     parser.add_argument('-g', '--generator',help='group generator for key exchange and pkc protocols', type=int)
+    parser.add_argument('-oaep', help='enable OAEP - only for RSA', action='store_true')
+    parser.add_argument('-pub', help='public key for PKC', type=int)
+    parser.add_argument('-priv', help='private key for PKC', type=int)
+    parser.add_argument('-mod', '--modulus', help='modulus for PKC', type=int)
 
     args = parser.parse_args()
 
     # MARK: check validity of CLI options
+    if not args.encrypt and not args.decrypt and cryptosystem not in exchange:
+        parser.error('ciphers should be invoked in encryption or decryption mode')
+    if args.decrypt and not args.key:
+        parser.error('key must be provided in decryption mode')
+    if not args.input:
+        parser.error('an input must be provided to the cryptosystem')
 
     def printBlocks(blocks):
         for i, block in enumerate(blocks):
@@ -52,12 +62,7 @@ if __name__ == '__main__':
     if args.cryptosystem in blockciphers:
         if not args.mode:
             parser.error('--mop is required for block ciphers')
-        if not args.encrypt and not args.decrypt:
-            parser.error('block ciphers should be invoked in encryption or decryption mode')
-        if args.decrypt and not args.key:
-            parser.error('key must be provided to block ciphers in decryption mode')
-        if not args.input:
-            parser.error('an input must be provided to the cryptosystem')
+
         if args.mode != 'ecb' and not args.initvector and args.decrypt:
             parser.error('Initialization vector must be provided for mode ' + args.mode + ' mode for decryption')
 
@@ -75,7 +80,7 @@ if __name__ == '__main__':
             block = [int(args.input, 16)]
             print(cipher.decrypt(block))
         
-    elif args.cryptosystem in secretkey:
+    elif args.cryptosystem in exchange:
         if not args.prime and not args.primelength:
             parser.error('A prime group order or prime length must be supplied with key exchange protocols')
         exchange = SecretKeySharing.DiffieHellman(args.prime, args.generator, args.primelength)
@@ -83,3 +88,29 @@ if __name__ == '__main__':
         print(f'Multiplicative group properties:\nPrime (largest group element + 1):\n{prime}\nGenerator:\n{generator}\nThis party sends:\n{expSecret}')
         correspondentExp = int(input('\nPlease enter the correspondent input:\n>> '))
         print('Shared secret:\n', exchange.generateSharedKey(correspondentExp))
+
+    if args.cryptosystem in pubkeycrypto:
+        if not (args.priv and args.pub and args.modulus) and not args.primelength:
+            parser.error('Public-key cryptosystems must be supplied either a key pair along with modulus or prime length')
+
+        cipher = modules[args.cryptosystem](pubKey=args.pub, privKey=args.priv, 
+            modulus=args.modulus, oaep=args.oaep, primeLength=args.primelength)
+        if args.primelength:
+            pubkey, privkey = cipher.generateKeys()
+            print('Public key:')
+            for key, val in zip(pubkey.keys(), pubkey.values()):
+                print(key + ':', val)
+            print('\nPrivate key:')
+            for key, val in zip(privkey.keys(), privkey.values()):
+                print(key + ':', val)
+        
+        print('\nOutput:')
+        if args.encrypt:
+            print(cipher.encrypt(args.input))
+        else:
+            ciphertext = args.input
+            try:
+                ciphertext = int(args.input)
+            except:
+                parser.error('Supplied input must be an integer')
+            print(cipher.decrypt(ciphertext))
