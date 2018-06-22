@@ -39,8 +39,6 @@ class RSA(PKC):
         # 4 - compute decryption exponent
         d = Utils.multiplicative_inverse(e, totient)
 
-        print('e x d mod totient(n):', (e * d) % totient)
-
         self.pubKey = e
         self.privKey = d
         self.modulus = n
@@ -63,5 +61,4 @@ class RSA(PKC):
         if self.enableOaep:
             OAEPencoder = Encoding.OAEP(self.oaepBlocksize, self.oaepk0, self.oaepk1)
             decrypted = OAEPencoder.decode(decrypted)
-        print('decrypted raw:', decrypted)
         return Encoding.decodeBits(decrypted)
