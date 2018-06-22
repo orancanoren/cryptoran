@@ -48,10 +48,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # MARK: check validity of CLI options
-    if not args.encrypt and not args.decrypt and cryptosystem not in exchange:
+    if not args.encrypt and not args.decrypt and args.cryptosystem not in exchange:
         parser.error('ciphers should be invoked in encryption or decryption mode')
-    if args.decrypt and not args.key:
-        parser.error('key must be provided in decryption mode')
     if not args.input:
         parser.error('an input must be provided to the cryptosystem')
 
@@ -70,6 +68,9 @@ if __name__ == '__main__':
 
 
     if args.cryptosystem in blockciphers:
+        if args.decrypt and not args.key:
+            parser.error('key must be provided in decryption mode')
+
         key = int(args.key, 16) if args.key else None
         iv = int(args.initvector, 16) if args.initvector else None
         cipher = modules[args.cryptosystem](args.mode, key, iv)
@@ -83,7 +84,7 @@ if __name__ == '__main__':
     elif args.cryptosystem in exchange:
         if not args.prime and not args.primelength:
             parser.error('A prime group order or prime length must be supplied with key exchange protocols')
-        exchange = SecretKeySharing.DiffieHellman(args.prime, args.generator, args.primelength)
+        exchange = keyexchange.DiffieHellman(args.prime, args.generator, args.primelength)
         prime, generator, expSecret = exchange.generateSecret()
         print(f'Multiplicative group properties:\nPrime (largest group element + 1):\n{prime}\nGenerator:\n{generator}\nThis party sends:\n{expSecret}')
         correspondentExp = int(input('\nPlease enter the correspondent input:\n>> '))
