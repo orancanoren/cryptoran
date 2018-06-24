@@ -12,46 +12,52 @@ from .pkc import PKC
 
 class RSA(PKC):
     def __init__(self, pubKey=None, privKey=None, modulus=None,
-            oaepBlocksize=1024, primeLength=None, oaepk0=128, oaepk1=128,
-            oaep=False):
+            primeLength=None, oaepBlocksize=1024, oaepk0=128, oaepk1=128,
+            oaep=False, asciiEncode = True):
         super().__init__(pubKey, privKey, modulus, primeLength)
         self.oaepBlocksize = oaepBlocksize
         self.oaepk0 = oaepk0
         self.oaepk1 = oaepk1
         self.enableOaep = oaep
+        self.asciiEncode = asciiEncode
 
     def generateKeys(self) -> tuple:
         # 1 - pick primes
-        p = Utils.randomLargePrime(self.primeLength // 2)
-        q = Utils.randomLargePrime(self.primeLength // 2)
-        while p == q:
+        if not self.pubKey or not self.privKey:
+            p = Utils.randomLargePrime(self.primeLength // 2)
             q = Utils.randomLargePrime(self.primeLength // 2)
+            while p == q:
+                q = Utils.randomLargePrime(self.primeLength // 2)
 
         # 2 - compute the modulus
-        n = p * q
-        totient = (p - 1) * (q - 1)
+        if not self.modulus:
+            n = p * q
+            totient = (p - 1) * (q - 1)
 
         # 3 - pick encryption exponent
-        e = 2
-        while Utils.EEA(e, totient)[0] != 1:
-            e = random.randint(2, totient - 1)
+        if not self.pubKey:
+            e = 2
+            while Utils.EEA(e, totient)[0] != 1:
+                e = random.randint(2, totient - 1)
 
         # 4 - compute decryption exponent
-        d = Utils.multiplicative_inverse(e, totient)
+        if not self.privKey:
+            d = Utils.multiplicative_inverse(e, totient)
 
         self.pubKey = e
         self.privKey = d
         self.modulus = n
-        return ({'encryption exponent': e, 'modulus': n}, {'decryption exponent': d})
+        return ((e, n), (d, ))
 
     def encrypt(self, messageString) -> int:
-        encodedMessage = Encoding.encodeText(messageString)
+        if self.asciiEncode:
+            messageString = Encoding.encodeText(messageString)
         if self.enableOaep:
             encoder = Encoding.OAEP(self.oaepBlocksize)
             if not (self.oaepk0 and self.oaepk1 and self.oaepBlocksize):
                 self.oaepBlocksize, self.oaepk0, self.oaepk1 = encoder.generateOAEPparams()
-            encodedMessage = encoder.encode(encodedMessage)
-        return pow(encodedMessage, self.pubKey, self.modulus)
+            messageString = encoder.encode(messageString)
+        return pow(messageString, self.pubKey, self.modulus)
 
     def decrypt(self, ciphertext) -> str:
         if self.enableOaep and (self.oaepBlocksize == None or self.oaepk0 == None or self.oaepk1 == None):
@@ -61,4 +67,6 @@ class RSA(PKC):
         if self.enableOaep:
             OAEPencoder = Encoding.OAEP(self.oaepBlocksize, self.oaepk0, self.oaepk1)
             decrypted = OAEPencoder.decode(decrypted)
-        return Encoding.decodeBits(decrypted)
+        if self.asciiEncode:
+            decrypted = Encoding.decodeBits(decrypted)
+        return decrypted

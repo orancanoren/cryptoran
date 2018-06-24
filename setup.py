@@ -10,5 +10,10 @@ setup(name='cryptoran',
       author='Oran Can Oren',
       author_email='orancanoren@gmail.com',
       license='MIT',
-      packages=find_packages()
+      packages=find_packages(),
+      entry_points={
+            'console_scripts': [
+                  'cryptoran = cryptoran.__main__:main'
+          ]
+      }
 )
