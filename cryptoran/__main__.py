@@ -16,6 +16,10 @@ def banner(description):
             |___/|_|                             ''')
     print('    ---------------------', description.upper(),'---------------------')
 
+errors = {
+    'keyfile': 'Key file contains invalid data, most likely data is corrupt',
+    'decNoKey': 'A key must be provided for decryption operations!'
+}
 
 class Cryptoran:
     def __init__(self):
@@ -48,8 +52,10 @@ class Cryptoran:
         return fo
 
     def _openFileWrite(self, filename: str, extension='oran'):
+        print('received filename, extension:', filename, extension)
         if os.path.isfile(filename):
-            filename = filename[:-5] + '_1.' + extension
+            filename = '.'.join(filename.split('.')[-1]) + extension
+            filename = filename[:len(extension)] + '_1.' + extension
         while os.path.isfile(filename):
             filename = filename[:-6] + str(int(filename[-6]) + 1) + '.' + extension
         fo = open(filename, 'w')
@@ -84,10 +90,7 @@ class Cryptoran:
             for line in fo:
                 if line[0] == '#': # comment line
                     continue
-                try:
-                    params.append(int(line, 16))
-                except:
-                    raise ValueError()
+                params.append(int(line, 16))
             return params
         
         sigtypes = { '0': readRSA }
@@ -125,11 +128,37 @@ class Cryptoran:
         privfo.close()
         return sigfo.name, privfo.name
 
+    def _writeKey(self, keytype: str, keyfile: str, key: dict):
+        # key is expected to be of format: { 'description': int_value }
+        fo = self._openFileWrite(keyfile, '.key')
+        for desc in key.keys():
+            fo.write('# ----BEGIN ' + desc + '----\n')
+            fo.write(hex(key[desc]))
+            fo.write('\n# ----END ' + desc + '----\n')
+        return fo.name
+
+    def _readKey(self, keytype: str, keyfile: str):
+        fo = self._openFileRead(keyfile)
+        def readAES():
+            params = []
+            for line in fo:
+                if line[0] == '#':
+                    continue
+                params.append(int(line, 16))
+            return params
+        
+        keytypes = { '1': readAES }
+        keyType = fo.readline()
+        if keyType[-1] == '\n':
+            keyType = keyType[:-1]
+        return keytypes[keytype]()
+
     def _writeBlocks(self, blocks: list, filename: str):
-        fo = self._openFileWrite(filename)
+        fo = self._openFileWrite(filename, '.enc')
         for block in blocks:
             fo.write(hex(block)[2:])
         fo.close()
+        return fo.name
 
     def _writeRaw(self, document: str, filename: str):
         fo = self._openFileWrite(filename)
@@ -149,49 +178,54 @@ class Cryptoran:
         )
         parser.add_argument('mode', help='mode of operation', choices=['cbc', 'ecb'])
         parser.add_argument('file', help='input file')
-        parser.add_argument('-k', help='key')
+        parser.add_argument('-k', help='key file')
         parser.add_argument('-iv', help='initial vector for CBC mode')
         parser.add_argument('-e', help='encrypt', action='store_true')
         parser.add_argument('-d', help='decrypt', action='store_true')
-        parser.add_argument('-o', help='outptut file name')
+        parser.add_argument('-ok', help='output key file')
+        parser.add_argument('-o', help='output file name (for encrypted or plaintext file)')
 
         args = parser.parse_args(sys.argv[2:])
 
+        # read the keyfile if existent
         key = None
         iv = None
-        
         try:
             if args.k:
-                key = int(args.k, 16)
+                key, iv = self._readKey('1', args.k)
         except:
-            self._displayError('Provided key must be in hexadecimal form', 'aes')
-        try:
-            if args.iv:
-                iv = int(args.iv, 16)
-        except:
-            self._displayError('Provided init vector must be in hexadecimal form', 'aes')
+            self._displayError(errors['keyfile'], 'aes')
         
         if args.d:
             if not args.k:
-                self._displayError('A key must be provided for decryption operations!', commandName)
+                self._displayError(errors['decNoKey'], commandName)
             if args.mode == 'cbc' and not args.iv:
-                self._displayError('Initial vector must be provided for decryption operations!', commandName)
+                self._displayError(errors['keyfile'], commandName)
         elif not args.e:
             self._displayError('Encryption or decryption operation not specified!', commandName)
 
-        outputFile = args.o + '.oran' if args.o else commandName + args.mode + ('_enc' if args.e else '_dec') + '.oran'
+        # set the output file
+
+        keyfile = args.ok if args.ok else args.file + '.enc'
+        outputFile = args.o if args.o else '.'.join(args.file.split('.')[-1])
+
+        # encrypt / decrypt
         try:
             cipher = cipherClass(args.mode, key, iv)
-            if args.e:
+            if args.e: # encryption
                 inData = self._readRaw(args.file)
                 if inData == '':
                     self._displayError('Input file is empty', 'aes')
-                self._writeBlocks(cipher.encrypt(inData), outputFile)
-            else:
+                encOutput = self._writeBlocks(cipher.encrypt(inData), outputFile)
+                print('Encryption result written to', encOutput)
+                keyOutput = self._writeKey('1', keyfile, cipher.getKeys())
+                print('Key stored in', keyOutput)
+            else: # decryption
                 inData = self._readBlocks(args.file, 32)
                 if inData == []:
                     self._displayError('Input file is empty', 'aes')
-                self._writeBlocks((cipher.decrypt(inData)), outputFile)
+                plainOutput = self._writeBlocks((cipher.decrypt(inData)), outputFile)
+                print('Output written to', plainOutput)
         except FileNotFoundError:
             self._displayError('Cannot open file: ' + args.file, commandName)      
 
@@ -224,7 +258,7 @@ class Cryptoran:
             try:
                 encExp, modulus, sigdata = self._readSig(args.sig)
             except ValueError:
-                self._displayError('Key file contains invalid data, most likely data is corrupt')
+                self._displayError(errors['keyfile'])
 
             if any([encExp, modulus, sigdata]) and not all([encExp, modulus, sigdata]):
                 self._displayError('Invalid signature file, parameters missing!')

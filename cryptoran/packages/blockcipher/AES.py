@@ -159,7 +159,6 @@ class AES(BlockCipher):
         self.key = key
         if self.key == None:
             self.key = self.generateRandomKey()
-            print('Randomly generated AES key:', hex(self.key))
         self.roundKeys = [0]
         self.mode = Mode(self, mode, IV)
         
@@ -217,6 +216,12 @@ class AES(BlockCipher):
                 roundKey <<= 32
                 roundKey |= keyMatrix[i*4 + j]
             self.roundKeys.append(roundKey)
+
+    def getKeys(self) -> dict:
+        keyDict = { 'AES KEY': self.key }
+        if self.mode._iv:
+            keyDict['AES IV'] = self.mode._iv
+        return keyDict
 
     def encryptBlock(self, block):
         if self.roundKeys[0] == 0:

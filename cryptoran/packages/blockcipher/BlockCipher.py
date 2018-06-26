@@ -22,5 +22,9 @@ class BlockCipher(ABC):
     def decrypt(self, blocks: list) -> str:
         pass
 
+    @abstractmethod
+    def getKeys(self) -> tuple:
+        pass
+
     def generateRandomKey(self) -> int:
         return Utils.randomNumber(self.keylength)
