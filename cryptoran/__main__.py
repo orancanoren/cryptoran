@@ -286,7 +286,7 @@ class Cryptoran:
                 self._displayError('Invalid key file!')
 
         # 3 - sign / verify the document
-        signer = signature.RSAsig(encExp, decExp, modulus, 1024) 
+        signer = signature.RSAsig(encExp, decExp, modulus, 2048) 
         if args.verify: # 3.1 - verification
             if not args.sig:
                 self._displayError('A signature file must be provided for verification')
