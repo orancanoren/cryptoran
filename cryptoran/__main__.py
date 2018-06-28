@@ -2,7 +2,8 @@
 import argparse
 import sys
 import os.path
-from packages import blockcipher, pkc, keyexchange, signature
+from .packages import blockcipher, pkc, keyexchange, signature
+from collections import namedtuple
 
 def banner(description):
     print('''
@@ -71,6 +72,7 @@ class Cryptoran:
         return document
         
     def _readBlocks(self, blocksize: int, filename: str):
+        
         fo = self._openFileRead(filename)
         
         blocks = []
@@ -104,7 +106,7 @@ class Cryptoran:
 
     def _writeSig(self, sigtype: str, sigfilename: str, privatefilename: str,
             publicparams: list, privateparams: list, signature):
-        lineWriter = lambda params: [str(x) + '\n' for x in params]
+        lineWriter = lambda params: [str(hex(x)) + '\n' for x in params]
         sigfo = self._openFileWrite(sigfilename, 'sig')
         privfo = self._openFileWrite(privatefilename, 'key')
 
@@ -114,7 +116,7 @@ class Cryptoran:
             sigfo.writelines(lineWriter(publicparams))
             sigfo.write('# -----END RSA PUBLIC KEY-----\n')
             sigfo.write('# -----BEGIN RSA SIGNATURE----\n')
-            sigfo.write(signature)
+            sigfo.write(hex(signature))
             sigfo.write('\n# -----END RSA SIGNATURE----')
             
             # write key file
@@ -133,22 +135,26 @@ class Cryptoran:
 
     def _writeKey(self, keytype: str, keyfile: str, key: dict):
         # key is expected to be of format: { 'description': int_value }
-        print('received keyfile:', keyfile)
         fo = self._openFileWrite(keyfile, 'key')
         for desc in key.keys():
-            fo.write('# ----BEGIN ' + desc + '----\n')
+            fo.write('----BEGIN ' + desc + '----\n')
             fo.write(hex(key[desc]))
-            fo.write('\n# ----END ' + desc + '----\n')
+            fo.write('\n----END ' + desc + '----\n')
         return fo.name
 
     def _readKey(self, keytype: str, keyfile: str):
         fo = self._openFileRead(keyfile)
         def readAES():
             params = []
+            fo.seek(0)
             for line in fo:
                 if line[0] == '#':
                     continue
-                params.append(int(line, 16))
+                if line[0] == '-':
+                    if 'END' in line:
+                        continue
+                    nextLine = fo.readline()
+                    params.append(int(nextLine, 16))
             return params
         
         keytypes = { '1': readAES }
@@ -165,9 +171,10 @@ class Cryptoran:
         return fo.name
 
     def _writeRaw(self, document: str, filename: str):
-        fo = self._openFileWrite(filename)
+        fo = self._openFileWrite(filename, 'dec')
         fo.write(document)
         fo.close()
+        return fo.name
 
     def _displayError(self, error, command = None):
         print('Error:', error)
@@ -194,19 +201,20 @@ class Cryptoran:
         # read the keyfile if existent
         key = None
         iv = None
-        try:
-            if args.k:
-                key, iv = self._readKey('1', args.k)
-        except:
-            self._displayError(errors['keyfile'], 'aes')
+        #try:
+        if args.k:
+            key, iv = self._readKey('1', args.k)
+        #except:
+            #self._displayError(errors['keyfile'], 'aes')
         
         if args.d:
             if not args.k:
                 self._displayError(errors['decNoKey'], commandName)
-            if args.mode == 'cbc' and not args.iv:
+            if args.mode == 'cbc' and not iv:
                 self._displayError(errors['keyfile'], commandName)
         elif not args.e:
             self._displayError('Encryption or decryption operation not specified!', commandName)
+            key, iv = self._readKey('aes', args.k)
 
         # set the output files
         keyfile = args.ok if args.ok else args.file
@@ -224,13 +232,13 @@ class Cryptoran:
                 keyOutput = self._writeKey('1', keyfile, cipher.getKeys())
                 print('Key stored in', keyOutput)
             else: # decryption
-                inData = self._readBlocks(args.file, 32)
+                inData = self._readBlocks(32, args.file) #error!
                 if inData == []:
                     self._displayError('Input file is empty', 'aes')
-                plainOutput = self._writeBlocks((cipher.decrypt(inData)), outputFile)
+                plainOutput = self._writeRaw((cipher.decrypt(inData)), outputFile)
                 print('Output written to', plainOutput)
         except FileNotFoundError:
-            self._displayError('Cannot open file: ' + args.file, commandName)      
+            self._displayError('Cannot open file: ' + args.file, commandName) 
 
     def aes(self):
         self._blockcipherOperation('aes', blockcipher.AES)
@@ -255,6 +263,9 @@ class Cryptoran:
         args = parser.parse_args(sys.argv[2:])
 
         # 2 - read the signature and key files if existent
+        if not args.verify and not args.sign:
+            self._displayError('No operation provided, sign or verify must be given')
+
         document = self._readRaw(args.file)
         encExp, modulus, decExp, sigdata = None, None, None, None
         if args.sig: # 2.1 - read the signature file
@@ -291,9 +302,9 @@ class Cryptoran:
                 encExp, modulus, decExp = keydata[0][0], keydata[0][1], keydata[1][0]
             
             sigdata = signer.sign(document)
-            sigOutFile = args.osig + '.sig' if args.osig else args.file + '.sig'
-            keyOutFile = args.ok + '.key' if args.ok else args.file + '.key'
-            sigfilename, keyfilename = self._writeSig('0', sigOutFile, keyOutFile, [encExp, modulus], [decExp], str(sigdata))
+            sigOutFile = args.osig if args.osig else args.file
+            keyOutFile = args.ok if args.ok else args.file
+            sigfilename, keyfilename = self._writeSig('0', sigOutFile, keyOutFile, [encExp, modulus], [decExp], sigdata)
             print('Signature written to', sigfilename, 'and key written to', keyfilename)
 
 def main():

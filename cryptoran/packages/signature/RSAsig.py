@@ -15,6 +15,4 @@ class RSAsig:
 
     def verify(self, document: str, signature: int) -> bool:
         signat = decodeBits(self.RSA.encrypt(signature))
-        print('DOCUMENT:\n', document)
-        print('\nSIGNATURE:\n', signat)
         return signat == document
