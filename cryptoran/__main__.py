@@ -51,13 +51,16 @@ class Cryptoran:
             self._displayError('File not found: ' + filename)
         return fo
 
-    def _openFileWrite(self, filename: str, extension='oran'):
-        print('received filename, extension:', filename, extension)
+    def _removeExtension(self, filename: str):
+        return '.'.join(filename.split('.')[:-1])
+
+    def _openFileWrite(self, filename: str, extension: str):
+        filename = filename + '.' + extension
         if os.path.isfile(filename):
-            filename = '.'.join(filename.split('.')[-1]) + extension
-            filename = filename[:len(extension)] + '_1.' + extension
+            filename = self._removeExtension(filename) + '_1.' + extension
         while os.path.isfile(filename):
-            filename = filename[:-6] + str(int(filename[-6]) + 1) + '.' + extension
+            filename = self._removeExtension(filename)
+            filename = filename[:-1] + str(int(filename.split('_')[-1]) + 1) + extension
         fo = open(filename, 'w')
         return fo
 
@@ -130,7 +133,8 @@ class Cryptoran:
 
     def _writeKey(self, keytype: str, keyfile: str, key: dict):
         # key is expected to be of format: { 'description': int_value }
-        fo = self._openFileWrite(keyfile, '.key')
+        print('received keyfile:', keyfile)
+        fo = self._openFileWrite(keyfile, 'key')
         for desc in key.keys():
             fo.write('# ----BEGIN ' + desc + '----\n')
             fo.write(hex(key[desc]))
@@ -154,7 +158,7 @@ class Cryptoran:
         return keytypes[keytype]()
 
     def _writeBlocks(self, blocks: list, filename: str):
-        fo = self._openFileWrite(filename, '.enc')
+        fo = self._openFileWrite(filename, 'enc')
         for block in blocks:
             fo.write(hex(block)[2:])
         fo.close()
@@ -204,10 +208,9 @@ class Cryptoran:
         elif not args.e:
             self._displayError('Encryption or decryption operation not specified!', commandName)
 
-        # set the output file
-
-        keyfile = args.ok if args.ok else args.file + '.enc'
-        outputFile = args.o if args.o else '.'.join(args.file.split('.')[-1])
+        # set the output files
+        keyfile = args.ok if args.ok else args.file
+        outputFile = args.o if args.o else args.file
 
         # encrypt / decrypt
         try:
