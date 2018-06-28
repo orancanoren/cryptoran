@@ -23,9 +23,8 @@ class Mode:
         self._crypto = cryptosystem
         self._mode = mode
         self._iv = IV
-        if not self._iv:
+        if mode in ['cbc'] and not self._iv:
             self._iv = cryptosystem.generateRandomKey()
-            print('Randomly generated IV:', hex(self._iv))
         
     @staticmethod
     def _blocksAreValid(blocks):
@@ -33,6 +32,9 @@ class Mode:
             print('blocks are:', blocks)
             return False
         return True
+
+    def getIV():
+        return self._iv
 
     def _ecbEncrypt(self, blocks):
         if not Mode._blocksAreValid(blocks):

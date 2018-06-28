@@ -67,7 +67,7 @@ def EEA(a, b):
     return  b, x0, y0
 
 def multiplicative_inverse(a, n):
-    gcd, x, _ = EEA(a, n)
+    gcd, _, x = EEA(a, n)
     if gcd == 1:
         return x % n
     else:

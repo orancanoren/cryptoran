@@ -5,10 +5,15 @@ long_description = 'Cryptoran is a Python3 based cryptographic algorithms librar
 setup(name='cryptoran',
       description='A Python3 based cryptographic algorithms library',
       long_description=long_description,
-      version='0.0.3',
+      version='0.0.4',
       url='https://github.com/orancanoren/cryptoran',
       author='Oran Can Oren',
       author_email='orancanoren@gmail.com',
       license='MIT',
-      packages=find_packages()
+      packages=find_packages(),
+      entry_points={
+            'console_scripts': [
+                  'cryptoran = cryptoran.__main__:main'
+          ]
+      }
 )
