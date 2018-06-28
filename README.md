@@ -2,10 +2,8 @@
 <h2>A crypto library implemented in pure Python 3</h2>
 Cryptoran provides pure Python 3 implementations of various cryptosystems and protocols along with mathematical tools used to build them. No external dependencies!
 
-It provides a command line tool that can be invoked with `cryptoran command [<args>]` and a Python 3 package that can be imported with `from cryptoran import <module>`.
-
 ### why use cryptoran
-Cryptoran aims to be a very easy tool to use; providing cryptographic primitives and protocols. A possible use case is to providing security to your client-server application. An addition of few lines of code will provide security [[_see notes_](##Notes)] to your communication.
+Cryptoran aims to be a very easy tool to use; providing cryptographic primitives and protocols. A possible use case is to providing security to your client-server application. An addition of few lines of code will provide security [[_see notes_](#Notes)] to your communication.
 
 ## Getting Started
 
@@ -13,6 +11,22 @@ Install easily with pip:
 ```bash
 $ pip3 install cryptoran
 ```
+
+### Command line toolikt
+
+You can use the command line toolkit as `cryptoran command [<args>]`.
+
+__Example__
+```bash
+$ cryptoran aes cbc myfile.txt -e
+Encryption result written to myfile.txt.enc
+Key stored in myfile.txt.key
+
+$ cryptoran aes cbc myfile.txt -d -k myfile.txt.key
+Output written to myfile.txt.enc.dec
+```
+Yeah, the filename extensions doesn't seem good. Perhaps you have a great proposal on that; feel free to contribute!
+### Python 3 package
 
 Import the package and retrieve the module you want.
 
