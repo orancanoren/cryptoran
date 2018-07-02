@@ -37,7 +37,7 @@ plaintext = "some ASCII encoded string"
 key = 0x89031375397e64eb86ed7d2f924e3100
 iv = 0xd0513d87e0be764b41ebb459680485e8
 
-cipher = BlockCiphers.AES('cbc', key, iv)
+cipher = blockcipher.AES('cbc', key, iv)
 ciphertextBlocks = cipher.encrypt(plaintext)
 # [0xdf87af9efc6747b7e4c4f6bd1ae46161, 0xaa6dce569cc53c272f6b9303e49d1c4b]
 
