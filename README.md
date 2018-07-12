@@ -3,7 +3,7 @@
 Cryptoran provides pure Python 3 implementations of various cryptosystems and protocols along with mathematical tools used to build them. No external dependencies!
 
 ### why use cryptoran
-Cryptoran aims to be a very easy tool to use; providing cryptographic primitives and protocols. A possible use case is to providing security to your client-server application. An addition of few lines of code will provide security [[_see notes_](#notes)] to your communication.
+Cryptoran aims to be a very easy tool to use; providing cryptographic primitives and protocols. A possible use case is to providing security to your client-server application [[example project: pigeon](https://github.com/orancanoren/pigeon)]. An addition of few lines of code will provide security [[_see notes_](#notes)] to your communication.
 
 ## Getting Started
 
