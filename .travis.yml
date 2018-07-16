@@ -1,0 +1,12 @@
+language: python
+python:
+  - "3.6"
+install:
+  - pip install .
+  - pip install nose coverage
+  - pip install coveralls
+script:
+  - nosetests test.py --with-coverage
+
+after_success:
+  coveralls
