@@ -1,5 +1,9 @@
 # cryptoran
-<h2>A crypto library implemented in pure Python 3</h2>
+
+[![Build Status](https://travis-ci.org/orancanoren/cryptoran.svg?branch=test)](https://travis-ci.org/orancanoren/cryptoran)
+
+[![PyPI version](https://badge.fury.io/py/cryptoran.svg)](https://badge.fury.io/py/cryptoran)
+
 Cryptoran provides pure Python 3 implementations of various cryptosystems and protocols along with mathematical tools used to build them. No external dependencies!
 
 ### why use cryptoran
