@@ -1,7 +1,13 @@
-# cryptoran
-
-[![Build Status](https://travis-ci.org/orancanoren/cryptoran.svg?branch=test)](https://travis-ci.org/orancanoren/cryptoran)
-[![PyPI version](https://badge.fury.io/py/cryptoran.svg)](https://badge.fury.io/py/cryptoran)
+<h1 align="center" style="border-bottom: none;">cryptoran</h1>
+<h3 align="center">Pure python3 crypto library implemented from scratch</h3>
+<p align="center">
+  <a href="https://pypi.org/project/cryptoran/">
+    <img alt="pypi" src="https://badge.fury.io/py/cryptoran.svg">
+  </a>
+  <a href="https://travis-ci.org/orancanoren/cryptoran">
+    <img alt="Travis" src="https://travis-ci.org/orancanoren/cryptoran.svg?branch=master">
+  </a>
+</p>
 
 Cryptoran provides pure Python 3 implementations of various cryptosystems and protocols along with mathematical tools used to build them. No external dependencies!
 
