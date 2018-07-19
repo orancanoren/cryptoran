@@ -21,7 +21,7 @@ Install easily with pip:
 $ pip3 install cryptoran
 ```
 
-### Command line toolikt
+### Command line toolkit
 
 You can use the command line toolkit as `cryptoran command [<args>]`.
 
