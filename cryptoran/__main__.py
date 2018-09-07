@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 import argparse
 import sys
+import string
 import os.path
-from .packages import blockcipher, pkc, keyexchange, signature
 from collections import namedtuple
+
+from .packages import blockcipher, pkc, keyexchange, signature
 
 def banner(description):
     print('''
@@ -19,7 +21,8 @@ def banner(description):
 
 errors = {
     'keyfile': 'Key file contains invalid data, most likely data is corrupt',
-    'decNoKey': 'A key must be provided for decryption operations!'
+    'decNoKey': 'A key must be provided for decryption operations!',
+    'noOperation': 'Encryption or decryption operation not specified!'
 }
 
 class Cryptoran:
@@ -142,26 +145,22 @@ class Cryptoran:
             fo.write('\n----END ' + desc + '----\n')
         return fo.name
 
-    def _readKey(self, keytype: str, keyfile: str):
+    def _readKey(self, keyfile: str) -> dict:
         fo = self._openFileRead(keyfile)
-        def readAES():
-            params = []
-            fo.seek(0)
-            for line in fo:
-                if line[0] == '#':
+
+        params = {}
+        fo.seek(0)
+        for line in fo:
+            if line[0] == '#':
+                continue
+            if line[0] == '-':
+                if 'END' in line:
                     continue
-                if line[0] == '-':
-                    if 'END' in line:
-                        continue
-                    nextLine = fo.readline()
-                    params.append(int(nextLine, 16))
-            return params
-        
-        keytypes = { '1': readAES }
-        keyType = fo.readline()
-        if keyType[-1] == '\n':
-            keyType = keyType[:-1]
-        return keytypes[keytype]()
+                lineInfo = line.translate(None, string.punctuation)
+                lineInfo = line.translate(None, string.whitespace)
+                nextLine = fo.readline()
+                params[lineInfo] = int(nextLine, 16)
+        return params
 
     def _writeBlocks(self, blocks: list, filename: str):
         fo = self._openFileWrite(filename, 'enc')
@@ -203,7 +202,7 @@ class Cryptoran:
         iv = None
         #try:
         if args.k:
-            key, iv = self._readKey('1', args.k)
+            key, iv = self._readKey(args.k)
         #except:
             #self._displayError(errors['keyfile'], 'aes')
         
@@ -213,8 +212,10 @@ class Cryptoran:
             if args.mode == 'cbc' and not iv:
                 self._displayError(errors['keyfile'], commandName)
         elif not args.e:
-            self._displayError('Encryption or decryption operation not specified!', commandName)
-            key, iv = self._readKey('aes', args.k)
+            self._displayError(errors['noOperation'], commandName)
+            keyData = self._readKey('aes', args.k)
+            key = keyData['AES_KEY']
+            iv = keyData['AES_IV']
 
         # set the output files
         keyfile = args.ok if args.ok else args.file
@@ -239,6 +240,44 @@ class Cryptoran:
                 print('Output written to', plainOutput)
         except FileNotFoundError:
             self._displayError('Cannot open file: ' + args.file, commandName) 
+
+    def _pkcOperation(self, commandName: str, cipherClass: pkc.PKC):
+        parser = argparse.ArgumentParser(
+            description=commandName,
+            usage='cryptoran ' + commandName + ' file [args]'
+        )
+        parser.add_argument('file', help='input file')
+        parser.add_argument('-pub', help='public key file')
+        parsear.add_argument('-priv', help='private key file')
+        parser.add_argument('-e', help='encrypt', action='store_true')
+        parser.add_argument('-d', help='decrypt', action='store_true')
+        parser.add_argument('-opub', help='output filename for public key')
+        parser.add_argument('-opriv', help='output filename for private key')
+        parser.add_argument('-o', help='output file name (for encrypted or plaintext file)')
+        parser.add_argument('--oaep', help='enable OAEP encoding [supported only by RSA]', action='store_true')
+
+        args = parser.parse_args(sys.argv[2:])
+
+        # read the keyfile
+        pubkeyFile = args.pub if args.pub else self._removeExtension(file) 
+        privkeyFile = args.priv if args.priv else self._removeExtension(file)
+
+        if args.pub:
+            pubkey = self._readKey(args.k)
+        
+        if args.d:
+            if not args.k:
+                self._displayError(errors['decNoKey'], commandName)
+        elif not args.e:
+            self._displayError(errors['noOperation'])
+
+        # set the output files
+        keyfile = args.ok if args.ok else args.file
+        outputFile = args.o if args.o else args.file
+
+        #encrypt/decrypt
+        try:
+            cipher = cipherClass(self._readKey(keyfile), args.oaep, )
 
     def aes(self):
         self._blockcipherOperation('aes', blockcipher.AES)
@@ -306,6 +345,10 @@ class Cryptoran:
             keyOutFile = args.ok if args.ok else args.file
             sigfilename, keyfilename = self._writeSig('0', sigOutFile, keyOutFile, [encExp, modulus], [decExp], sigdata)
             print('Signature written to', sigfilename, 'and key written to', keyfilename)
+
+    def rsa(self):
+        self._pkcOperation('rsa', pkc.RSA)
+
 
 def main():
     # main routine
