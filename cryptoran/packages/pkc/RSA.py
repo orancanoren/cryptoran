@@ -20,34 +20,36 @@ class RSAPrivateKey:
         self.decryptionExponent = decryptionExponent
 
 class RSA(PKC):
-    def __init__(self, pubkeyDictionary=None, privkeyDictionary=None, 
-        enableOAEP=False, asciiEncode = True):
+    def __init__(self, enableOAEP=False, asciiEncode = True):
         # Args:
         # - pubkeyDictionary: A dictionary containing public key values
         # - privkeyDictionary: A dictionary containing private key values
         # - enableOAEP: Set true to enable OAEP encoding, type: bool
         # - oaepEncoder: OAEP encoder object used to encode/decode messages, type: Encoding.OAEP,
         # - asciiEncode: Set true to encode ASCII messages prior encryption and to decode ASCII post decryption
-
-        dictionaryKeys = pubkeyDictionary.keys()
-        if 'ENC_EXPONENT' not in dictionaryKeys or 'MODULUS' not in dictionaryKeys:
-            raise Exception("Public key not found in the key dictionary!")
-
-        if pubkeyDictionary:
-            self.setPublicKey(pubkeyDictionary)
-        if privkeyDictionary:
-            self.setPrivateKey(privkeyDictionary)
-
         self.enableOAEP = enableOAEP
-
-        self.oaepEncoder = Encoding.OAEP(pubkeyDictionary['OAEP_BLOCKSIZE'], 
-            pubkeyDictionary['OAEP_K0'], pubkeyDictionary['OAEP_K1'])
         self.asciiEncode = asciiEncode
+        self.publicKey = None
+        self.privateKey = None
 
     def setPublicKey(self, keyDictionary: dict):
+        dictionaryFields = keyDictionary.keys()
+        if 'ENC_EXPONENT' not in dictionaryFields or 'MODULUS' not in dictionaryFields:
+            raise ValueError('Provided RSA public key dictionary does not contain required fields!')
+
         self.publicKey = RSAPublicKey(keyDictionary['ENC_EXPONENT'], keyDictionary['MODULUS'])
+        if self.enableOAEP:
+            if ('OAEP_BLOCKSIZE' not in dictionaryFields) or ('OAEP_K0' not in dictionaryFields) or ('OAEP_K1' not in dictionaryFields):
+                raise ValueError('Provided RSA public key dictionary does not contain all/any OAEP parameters!')
+
+            self.oaepEncoder = Encoding.OAEP(keyDictionary['OAEP_BLOCKSIZE'], 
+                keyDictionary['OAEP_K0'], keyDictionary['OAEP_K1'])
 
     def setPrivateKey(self, keyDictionary: dict):
+        dictionaryFields = keyDictinoary.fields()
+        if 'DEC_EXPONENT' not in dictionaryFields:
+            raise ValueError('Provided RSA private key dictionary does not contain the decryption exponent!')
+
         self.privateKey = RSAPrivateKey(keyDictionary['DEC_EXPONENT'])
 
     def generateKeypair(self, keysize, oaepBlocksize=None, oaepk0length=None, oaepk1length=None):
@@ -93,6 +95,9 @@ class RSA(PKC):
         self.privateKey = RSAPrivateKey(d)
 
     def encrypt(self, messageString) -> int:
+        if not self.publicKey:
+            raise ValueError('Public key not set at time of encryption!')
+
         if self.asciiEncode:
             messageString = Encoding.encodeText(messageString)
             
@@ -110,11 +115,18 @@ class RSA(PKC):
             decrypted = Encoding.decodeBits(decrypted)
         return decrypted
 
-    def getKeys(self) -> dict:
+    def getPrivkey(self) -> dict:
+        keyDictionary = {
+            'DEC_EXPONENT': self.privateKey.decryptionExponent,
+        }
+
+        return keyDictionary
+
+
+    def getPubkey(self) -> dict:
         keyDictionary = {
             'ENC_EXPONENT': self.publicKey.encryptionExponent,
-            'MODULUS': self.publicKey.modulus,
-            'DEC_EXPONENT': self.privateKey.decryptionExponent,
+            'MODULUS': self.publicKey.modulus
         }
 
         if self.enableOAEP:

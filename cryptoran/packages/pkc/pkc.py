@@ -22,4 +22,9 @@ class PKC:
         pass
     
     @abstractmethod
-    def getKeys(self) -> dict
+    def getPubkey(self) -> dict:
+        pass
+
+    @abstractmethod
+    def getPrivkey(self) -> dict:
+        pass

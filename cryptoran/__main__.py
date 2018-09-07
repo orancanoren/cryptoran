@@ -5,7 +5,7 @@ import string
 import os.path
 from collections import namedtuple
 
-from .packages import blockcipher, pkc, keyexchange, signature
+from packages import blockcipher, pkc, keyexchange, signature
 
 def banner(description):
     print('''
@@ -136,9 +136,9 @@ class Cryptoran:
         privfo.close()
         return sigfo.name, privfo.name
 
-    def _writeKey(self, keytype: str, keyfile: str, key: dict):
+    def _writeKey(self, filename: str, extension: str, key: dict):
         # key is expected to be of format: { 'description': int_value }
-        fo = self._openFileWrite(keyfile, 'key')
+        fo = self._openFileWrite(filename, extension)
         for desc in key.keys():
             fo.write('----BEGIN ' + desc + '----\n')
             fo.write(hex(key[desc]))
@@ -169,9 +169,9 @@ class Cryptoran:
         fo.close()
         return fo.name
 
-    def _writeRaw(self, document: str, filename: str):
+    def _writeRaw(self, message: str, filename: str, extension: str):
         fo = self._openFileWrite(filename, 'dec')
-        fo.write(document)
+        fo.write(message)
         fo.close()
         return fo.name
 
@@ -230,7 +230,7 @@ class Cryptoran:
                     self._displayError('Input file is empty', 'aes')
                 encOutput = self._writeBlocks(cipher.encrypt(inData), outputFile)
                 print('Encryption result written to', encOutput)
-                keyOutput = self._writeKey('1', keyfile, cipher.getKeys())
+                keyOutput = self._writeKey(keyfile, cipher.getKeys())
                 print('Key stored in', keyOutput)
             else: # decryption
                 inData = self._readBlocks(32, args.file) #error!
@@ -239,7 +239,8 @@ class Cryptoran:
                 plainOutput = self._writeRaw((cipher.decrypt(inData)), outputFile)
                 print('Output written to', plainOutput)
         except FileNotFoundError:
-            self._displayError('Cannot open file: ' + args.file, commandName) 
+            self._displayError('Cannot open file: ' + args.file, commandName)
+            sys.exit(1) 
 
     def _pkcOperation(self, commandName: str, cipherClass: pkc.PKC):
         parser = argparse.ArgumentParser(
@@ -248,36 +249,81 @@ class Cryptoran:
         )
         parser.add_argument('file', help='input file')
         parser.add_argument('-pub', help='public key file')
-        parsear.add_argument('-priv', help='private key file')
-        parser.add_argument('-e', help='encrypt', action='store_true')
-        parser.add_argument('-d', help='decrypt', action='store_true')
+        parser.add_argument('-priv', help='private key file')
         parser.add_argument('-opub', help='output filename for public key')
         parser.add_argument('-opriv', help='output filename for private key')
-        parser.add_argument('-o', help='output file name (for encrypted or plaintext file)')
+        parser.add_argument('-e', help='encrypt', action='store_true')
+        parser.add_argument('-d', help='decrypt', action='store_true')
+        parser.add_argument('-pl', '--prime-length', help='prime length  in bits for key generation - used if public key is not provided, defaults to 2048', type=int)
+        parser.add_argument('-o', help='output file name (for encrypted or decrypted file)')
         parser.add_argument('--oaep', help='enable OAEP encoding [supported only by RSA]', action='store_true')
 
         args = parser.parse_args(sys.argv[2:])
 
         # read the keyfile
-        pubkeyFile = args.pub if args.pub else self._removeExtension(file) 
-        privkeyFile = args.priv if args.priv else self._removeExtension(file)
+        pubkeyDict, privkeyDict = None, None
 
         if args.pub:
-            pubkey = self._readKey(args.k)
+            pubkeyDict = self._readKey(args.pub)
         
         if args.d:
-            if not args.k:
+            if not args.priv:
                 self._displayError(errors['decNoKey'], commandName)
+                sys.exit(1)
+            privkeyDict = self._readKey(args.priv)
         elif not args.e:
             self._displayError(errors['noOperation'])
 
-        # set the output files
-        keyfile = args.ok if args.ok else args.file
-        outputFile = args.o if args.o else args.file
-
         #encrypt/decrypt
         try:
-            cipher = cipherClass(self._readKey(keyfile), args.oaep, )
+            cipher = cipherClass(args.oaep)
+
+            # read the input file
+            inputData = self._readRaw(args.file)
+            if inputData == '':
+                self._displayError('Input file is empty', commandName)
+                sys.exit(1)
+
+            if args.e:
+                encryptionOutputFile = args.o if args.o else args.file
+
+                if not args.pub:
+                    cipher.generateKeypair(512)
+                else:
+                    cipher.setPublicKey(pubkeyDict)
+                    if args.d:
+                        cipher.setPrivateKey(privkeyDict)
+
+                encryptionOutput = cipher.encrypt(inputData)
+
+                # output the encryption result
+                outputFile = self._writeBlocks([encryptionOutput], encryptionOutputFile)
+                print('Encryption result written to', outputFile)
+
+                # output keys if they were generated
+                if not args.pub:
+                    # set output file names
+                    pubkeyOutputFile = args.opub if args.opub else args.file
+                    privkeyOutputFile = args.opriv if args.opriv else args.file
+
+                    pubkeyDict = cipher.getPubkey()
+                    pubkeyOutputFile = self._writeKey(pubkeyOutputFile, 'pub', pubkeyDict)
+                    print('Public key written to', pubkeyOutputFile)
+
+                    privkeyDict = cipher.getPrivkey()
+                    privkeyOutputFile = self._writeKey(privkeyOutputFile, 'priv', privkeyDict)
+                    print('Private key written to', privkeyOutputFile)
+            else:
+                decryptionOutputFile = args.o if args.o else args.file
+
+                decryptionOutput = cipher.decrypt(inputData)
+
+                # output the decryption result
+                outputFile = self._writeRaw(decryptionOutput, decryptionOutputFile, 'dec')
+                print('Decryption result written to', outputFile)
+        except FileNotFoundError:
+            self._displayError('Cannot open file: ' + args.file, commandName)
+            sys.exit(1)
 
     def aes(self):
         self._blockcipherOperation('aes', blockcipher.AES)
