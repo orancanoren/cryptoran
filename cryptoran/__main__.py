@@ -403,6 +403,9 @@ class Cryptoran:
     def rsa(self):
         self._pkcOperation('rsa', pkc.RSA)
 
+    def elgamal(self):
+        print("ElGamal cryptosystem is currently unavailable for the command-line interface")
+        #self._pkcOperation('elgamal', pkc.ElGamal)
 
 def main():
     # main routine
