@@ -140,12 +140,17 @@ class Cryptoran:
         # key is expected to be of format: { 'description': int_value }
         fo = self._openFileWrite(filename, extension)
         for desc in key.keys():
-            fo.write('----BEGIN ' + desc + '----\n')
+            fo.write('---- ' + desc + '----\n')
             fo.write(hex(key[desc]))
-            fo.write('\n----END ' + desc + '----\n')
+            fo.write('\n')
         return fo.name
 
     def _readKey(self, keyfile: str) -> dict:
+        #stringTranslator = string.maketrans(string.punctuation, None)
+        
+        translationTablePunctuation = str.maketrans('', '', string.punctuation)
+        translationTableWhitespace = str.maketrans('', '', string.whitespace)
+
         fo = self._openFileRead(keyfile)
 
         params = {}
@@ -156,8 +161,8 @@ class Cryptoran:
             if line[0] == '-':
                 if 'END' in line:
                     continue
-                lineInfo = line.translate(None, string.punctuation)
-                lineInfo = line.translate(None, string.whitespace)
+                lineInfo = line.translate(translationTablePunctuation)
+                lineInfo = lineInfo.translate(translationTableWhitespace)
                 nextLine = fo.readline()
                 params[lineInfo] = int(nextLine, 16)
         return params
@@ -314,9 +319,12 @@ class Cryptoran:
                     privkeyOutputFile = self._writeKey(privkeyOutputFile, 'priv', privkeyDict)
                     print('Private key written to', privkeyOutputFile)
             else:
+                cipher.setPrivateKey(privkeyDict)
+                cipher.setPublicKey(pubkeyDict)
+
                 decryptionOutputFile = args.o if args.o else args.file
 
-                decryptionOutput = cipher.decrypt(inputData)
+                decryptionOutput = cipher.decrypt(int(inputData, 16))
 
                 # output the decryption result
                 outputFile = self._writeRaw(decryptionOutput, decryptionOutputFile, 'dec')
