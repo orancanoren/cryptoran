@@ -91,6 +91,7 @@ class RSA(PKC):
         # 6 - compute decryption exponent
         d = Utils.multiplicative_inverse(e, totient)
 
+        self.primes = (p, q)
         self.publicKey = RSAPublicKey(e, n, )
         self.privateKey = RSAPrivateKey(d)
 
