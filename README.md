@@ -1,3 +1,6 @@
+<p align="center">
+<img src="https://github.com/orancanoren/cryptoran/blob/Logo-Update/Cryptoran%20Logo.png" width="275" />
+</p>
 <h1 align="center" style="border-bottom: none;">cryptoran</h1>
 <h3 align="center">Pure python3 crypto library implemented from scratch</h3>
 <p align="center">
